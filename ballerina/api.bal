@@ -15,7 +15,6 @@
 // under the License.
 
 import ballerina/jballerina.java;
-import ballerinax/azure.openai.chat as azureChat;
 
 type AzureOpenAIClientConfig record {|
     string serviceUrl;
@@ -25,18 +24,6 @@ type AzureOpenAIClientConfig record {|
 |};
 
 configurable AzureOpenAIClientConfig? azureOpenAIClientConfig = ();
-
-final azureChat:Client? chatClient;
-
-function init() returns error? {
-    if azureOpenAIClientConfig is () {
-        return ();
-    }
-
-    AzureOpenAIClientConfig config = <AzureOpenAIClientConfig> azureOpenAIClientConfig;
-    AzureOpenAIClientConfig {serviceUrl, apiKey} = config;
-    chatClient = check new (config = {auth: {apiKey: apiKey}}, serviceUrl = serviceUrl);
-}
 
 public type Prompt object {
     *object:RawTemplate;
@@ -51,41 +38,3 @@ public isolated function call(Prompt prompt, typedesc<anydata> td = <>)
 } external;
 
 public const annotation LlmCall on source external;
-
-isolated function buildPromptString(Prompt prompt, typedesc<anydata> td) returns string {
-    string str = prompt.strings[0];
-    anydata[] insertions = prompt.insertions;
-    foreach int i in 0 ..< insertions.length() {
-        str = str + insertions[i].toString() + prompt.strings[i + 1];
-    }
-    return string `${str}.  
-        The output should be a JSON value that satisfies the following JSON schema, 
-        returned within a markdown snippet enclosed within ${"```json"} and ${"```"}
-        
-        Schema:
-        ${generateJsonSchemaForTypedesc(td)}`;
-}
-
-isolated function callLlm(Prompt prompt, typedesc<anydata> td) returns anydata|error {
-    azureChat:Client azureClient = check chatClient.ensureType();
-    AzureOpenAIClientConfig {deploymentId, apiVersion} = check azureOpenAIClientConfig.ensureType();
-
-    azureChat:CreateChatCompletionRequest chatBody = {
-        messages: [{role: "user", "content": buildPromptString(prompt, td)}]
-    };
-
-    azureChat:CreateChatCompletionResponse chatResult = check azureClient->/deployments/[deploymentId]/chat/completions.post(apiVersion, chatBody);
-    record {|azureChat:ChatCompletionResponseMessage message?; azureChat:ContentFilterChoiceResults content_filter_results?; int index?; string finish_reason?; anydata...;|}[]? choices = chatResult.choices;
-
-    if choices is () {
-        return error("No completion found");
-    }
-
-    string? resp = choices[0].message?.content;
-    if resp is () {
-        return error("No completion found");
-    }
-
-    string processedResponse = re `${"```json|```"}`.replaceAll(resp, "");
-    return processedResponse.fromJsonStringWithType(td);
-}

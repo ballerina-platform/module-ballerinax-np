@@ -104,7 +104,10 @@ task deleteDependencyTomlFiles {
 updateTomlFiles.dependsOn copyStdlibs
 
 build.dependsOn "generatePomFileForMavenPublication"
+build.dependsOn ":${packageName}-native:build"
 build.dependsOn deleteDependencyTomlFiles
+
+test.dependsOn ":${packageName}-native:build"
 
 publish.dependsOn build
 publishToMavenLocal.dependsOn build

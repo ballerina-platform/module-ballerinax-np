@@ -42,9 +42,11 @@ plugins {
 
 rootProject.name = 'np'
 include(':checkstyle')
+include(':np-native')
 include(':np-ballerina')
 
 project(':checkstyle').projectDir = file("build-config${File.separator}checkstyle")
+project(':np-native').projectDir = file('native')
 project(':np-ballerina').projectDir = file('ballerina')
 
 gradleEnterprise {

@@ -14,3 +14,8 @@ graalvmCompatible = true
 [build-options]
 observabilityIncluded = true
 
+[[platform.java21.dependency]]
+groupId = "io.ballerina.lib"
+artifactId = "np-native"
+version = "@toml.version@"
+path = "../native/build/libs/np-native-@project.version@.jar"

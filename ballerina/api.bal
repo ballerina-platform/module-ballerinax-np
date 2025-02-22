@@ -50,6 +50,8 @@ public isolated function call(Prompt prompt, typedesc<anydata> td = <>)
     'class: "io.ballerina.lib.np.Native"
 } external;
 
+public const annotation LlmCall on source external;
+
 isolated function buildPromptString(Prompt prompt, typedesc<anydata> td) returns string {
     string str = prompt.strings[0];
     anydata[] insertions = prompt.insertions;

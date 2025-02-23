@@ -14,18 +14,34 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerinax/azure.openai.chat as azureChat;
+import ballerinax/openai.chat as openAIChat;
+import ballerinax/azure.openai.chat as azureOpenAIChat;
 
-final azureChat:Client? chatClient;
+final azureOpenAIChat:Client|openAIChat:Client? chatClient;
+final (isolated function (Prompt, typedesc<anydata>) returns anydata|error)? llmFunc;
 
 function init() returns error? {
-    if azureOpenAIClientConfig is () {
-        return ();
+    AzureOpenAIClientConfig|OpenAIClientConfig? llmClientConfigVar = llmClientConfig;
+    if llmClientConfigVar is () {
+        chatClient = ();
+        llmFunc = ();
+        return;
     }
 
-    AzureOpenAIClientConfig config = <AzureOpenAIClientConfig>azureOpenAIClientConfig;
-    AzureOpenAIClientConfig {serviceUrl, apiKey} = config;
-    chatClient = check new (config = {auth: {apiKey: apiKey}}, serviceUrl = serviceUrl);
+    if llmClientConfigVar is AzureOpenAIClientConfig {
+        AzureOpenAIClientConfig {serviceUrl, connectionConfig} = llmClientConfigVar;
+        chatClient = check new azureOpenAIChat:Client(connectionConfig, serviceUrl);
+        llmFunc = callAzureOpenAI;
+        return;
+    }
+
+    // OpenAIClientConfig
+    OpenAIClientConfig {serviceUrl, connectionConfig} = llmClientConfigVar;
+    chatClient = check (serviceUrl is () ? 
+                            new openAIChat:Client(connectionConfig) : 
+                            new openAIChat:Client(connectionConfig, serviceUrl));
+    llmFunc = callOpenAI;
+    return;
 }
 
 isolated function buildPromptString(Prompt prompt, typedesc<anydata> td) returns string {
@@ -43,31 +59,9 @@ isolated function buildPromptString(Prompt prompt, typedesc<anydata> td) returns
 }
 
 isolated function callLlm(Prompt prompt, typedesc<anydata> td) returns anydata|error {
-    azureChat:Client azureClient = check chatClient.ensureType();
-    AzureOpenAIClientConfig {deploymentId, apiVersion} = check azureOpenAIClientConfig.ensureType();
-
-    azureChat:CreateChatCompletionRequest chatBody = {
-        messages: [{role: "user", "content": buildPromptString(prompt, td)}]
-    };
-
-    azureChat:CreateChatCompletionResponse chatResult =
-        check azureClient->/deployments/[deploymentId]/chat/completions.post(apiVersion, chatBody);
-    record {
-        azureChat:ChatCompletionResponseMessage message?;
-        azureChat:ContentFilterChoiceResults content_filter_results?;
-        int index?;
-        string finish_reason?;
-    }[]? choices = chatResult.choices;
-
-    if choices is () {
-        return error("No completion found");
+    (isolated function (Prompt, typedesc<anydata>) returns anydata|error)? llmFuncVar = llmFunc;
+    if llmFuncVar is () {
+        panic error("LLM configuration is not provided to use with LLM calls");
     }
-
-    string? resp = choices[0].message?.content;
-    if resp is () {
-        return error("No completion found");
-    }
-
-    string processedResponse = re `${"```json|```"}`.replaceAll(resp, "");
-    return processedResponse.fromJsonStringWithType(td);
+    return llmFuncVar(prompt, td);
 }

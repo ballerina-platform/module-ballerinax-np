@@ -16,14 +16,7 @@
 
 import ballerina/jballerina.java;
 
-type AzureOpenAIClientConfig record {|
-    string serviceUrl;
-    string apiKey;
-    string deploymentId;
-    string apiVersion;
-|};
-
-configurable AzureOpenAIClientConfig? azureOpenAIClientConfig = ();
+configurable AzureOpenAIClientConfig|OpenAIClientConfig? llmClientConfig = ();
 
 public type Prompt object {
     *object:RawTemplate;

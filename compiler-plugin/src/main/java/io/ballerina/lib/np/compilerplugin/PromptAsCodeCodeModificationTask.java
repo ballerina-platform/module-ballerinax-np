@@ -175,7 +175,7 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
         return NodeFactory.createQualifiedNameReferenceNode(
                 NodeFactory.createIdentifierToken(npPrefix),
                 COLON,
-                NodeFactory.createIdentifierToken("call")
+                NodeFactory.createIdentifierToken("callLlm")
         );
     }
 }

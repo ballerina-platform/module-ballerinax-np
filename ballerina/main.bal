@@ -58,7 +58,7 @@ isolated function buildPromptString(Prompt prompt, typedesc<anydata> td) returns
         ${generateJsonSchemaForTypedescAsString(td)}`;
 }
 
-isolated function callLlm(Prompt prompt, typedesc<anydata> td) returns anydata|error {
+isolated function callLlmBal(Prompt prompt, typedesc<anydata> td) returns anydata|error {
     (isolated function (Prompt, typedesc<anydata>) returns anydata|error)? llmFuncVar = llmFunc;
     if llmFuncVar is () {
         panic error("LLM configuration is not provided to use with LLM calls");

@@ -24,7 +24,7 @@ public type Prompt object {
     public anydata[] insertions;
 };
 
-public isolated function call(Prompt prompt, typedesc<anydata> td = <>) 
+public isolated function callLlm(Prompt prompt, typedesc<anydata> td = <>) 
         returns td|error = @java:Method {
     name: "callLlmCallBallerinaFunction",
     'class: "io.ballerina.lib.np.Native"

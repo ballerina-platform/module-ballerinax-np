@@ -39,7 +39,7 @@ isolated function buildPromptString(Prompt prompt, typedesc<anydata> td) returns
         returned within a markdown snippet enclosed within ${"```json"} and ${"```"}
         
         Schema:
-        ${generateJsonSchemaForTypedesc(td)}`;
+        ${generateJsonSchemaForTypedescAsString(td)}`;
 }
 
 isolated function callLlm(Prompt prompt, typedesc<anydata> td) returns anydata|error {

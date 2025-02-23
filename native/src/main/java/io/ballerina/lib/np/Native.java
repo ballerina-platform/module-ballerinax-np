@@ -71,4 +71,8 @@ public class Native {
         return ValueCreator.createTypedescValue(
                 ((ArrayType) TypeUtils.getImpliedType(td.getDescribingType())).getElementType());
     }
+
+    public static boolean containsNil(BTypedesc td) {
+        return td.getDescribingType().isNilable();
+    }
 }

@@ -5,6 +5,7 @@ on:
   schedule:
     - cron:  '30 20 * * *'
 
+
 jobs:
   call_workflow:
     name: Run Trivy Scan Workflow

@@ -48,7 +48,7 @@ def stripBallerinaExtensionVersion(String extVersion) {
 
 ballerina {
     module = packageName
-    langVersion = ballerinaLangVersion
+    langVersion = ballerinaLangTimestampedVersion
     testCoverageParam = "--code-coverage --coverage-format=xml"
     packageOrganization = packageOrg
     platform = "any"

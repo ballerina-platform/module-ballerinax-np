@@ -45,10 +45,12 @@ def stripBallerinaExtensionVersion(String extVersion) {
 }
 
 ballerina {
-    testCoverageParam = "--code-coverage --coverage-format=xml"
-    packageOrganization = packageOrg
     module = packageName
     langVersion = ballerinaLangVersion
+    testCoverageParam = "--code-coverage --coverage-format=xml"
+    packageOrganization = packageOrg
+    platform = "any"
+    isConnector = true
 }
 
 configurations {
@@ -99,6 +101,10 @@ task deleteDependencyTomlFiles {
     if (project.hasProperty("deleteDependencies")) {
         delete "${project.projectDir}/Dependencies.toml"
     }
+}
+
+clean {
+    delete 'build'
 }
 
 updateTomlFiles.dependsOn copyStdlibs

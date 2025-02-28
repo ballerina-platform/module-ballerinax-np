@@ -1,38 +1,51 @@
-import ballerinax/azure.openai.chat as azureOpenAIChat;
+import ballerinax/azure.openai.chat;
 
-type AzureOpenAIClientConfig record {|
-    azureOpenAIChat:ConnectionConfig connectionConfig;
+public type AzureOpenAIModelConfig record {|
+    chat:ConnectionConfig connectionConfig;
     string serviceUrl;
-    string deploymentId;
-    string apiVersion;
 |};
 
-isolated function callAzureOpenAI(Prompt prompt, typedesc<anydata> td) returns anydata|error {
-    azureOpenAIChat:Client azureOpenAIClient = <azureOpenAIChat:Client> chatClient;
-    AzureOpenAIClientConfig {deploymentId, apiVersion} = <AzureOpenAIClientConfig> llmClientConfig;
+public isolated distinct client class AzureOpenAIModel {
+    *Model;
 
-    azureOpenAIChat:CreateChatCompletionRequest chatBody = {
-        messages: [{role: "user", "content": buildPromptString(prompt, td)}]
-    };
+   private final chat:Client cl;
+   private final string deploymentId;
+   private final string apiVersion;
 
-    azureOpenAIChat:CreateChatCompletionResponse chatResult =
-        check azureOpenAIClient->/deployments/[deploymentId]/chat/completions.post(apiVersion, chatBody);
-    record {
-        azureOpenAIChat:ChatCompletionResponseMessage message?;
-        azureOpenAIChat:ContentFilterChoiceResults content_filter_results?;
-        int index?;
-        string finish_reason?;
-    }[]? choices = chatResult.choices;
+   public isolated function init(chat:Client|AzureOpenAIModelConfig azureOpenAI,
+                        string deploymentId,
+                        string apiVersion) returns error? {
+       self.cl = azureOpenAI is chat:Client ? 
+                    azureOpenAI :
+                    check new (azureOpenAI.connectionConfig, azureOpenAI.serviceUrl);
+       self.deploymentId = deploymentId;
+       self.apiVersion = apiVersion;
+   }
 
-    if choices is () {
-        return error("No completion found");
+
+    isolated remote function call(Prompt prompt, typedesc<anydata> td) returns string|error {
+        chat:CreateChatCompletionRequest chatBody = {
+            messages: [{role: "user", "content": buildPromptString(prompt, td)}]
+        };
+
+        chat:Client cl = self.cl;
+        chat:CreateChatCompletionResponse chatResult =
+            check cl->/deployments/[self.deploymentId]/chat/completions.post(self.apiVersion, chatBody);
+        record {
+            chat:ChatCompletionResponseMessage message?;
+            chat:ContentFilterChoiceResults content_filter_results?;
+            int index?;
+            string finish_reason?;
+        }[]? choices = chatResult.choices;
+
+        if choices is () {
+            return error("No completion found");
+        }
+
+        string? resp = choices[0].message?.content;
+        if resp is () {
+            return error("No completion found");
+        }
+        return resp;
     }
-
-    string? resp = choices[0].message?.content;
-    if resp is () {
-        return error("No completion found");
-    }
-
-    string processedResponse = re `${"```json|```"}`.replaceAll(resp, "");
-    return processedResponse.fromJsonStringWithType(td);
 }

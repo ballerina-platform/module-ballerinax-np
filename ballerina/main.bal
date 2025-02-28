@@ -14,34 +14,53 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerinax/openai.chat as openAIChat;
-import ballerinax/azure.openai.chat as azureOpenAIChat;
+type DefaultModelConfig DefaultAzureOpenAIModelConfig|DefaultOpenAIModelConfig;
 
-final azureOpenAIChat:Client|openAIChat:Client? chatClient;
-final (isolated function (Prompt, typedesc<anydata>) returns anydata|error)? llmFunc;
+type DefaultAzureOpenAIModelConfig record {|
+    *AzureOpenAIModelConfig;
+    string deploymentId;
+    string apiVersion;
+|};
+
+type DefaultOpenAIModelConfig record {|
+    *OpenAIModelConfig;
+    string model;
+|};
+
+final Model? defaultModel;
 
 function init() returns error? {
-    AzureOpenAIClientConfig|OpenAIClientConfig? llmClientConfigVar = llmClientConfig;
-    if llmClientConfigVar is () {
-        chatClient = ();
-        llmFunc = ();
+    DefaultModelConfig? defaultModelConfigVar = defaultModelConfig;
+    if defaultModelConfigVar is () {
+        defaultModel = ();
         return;
     }
 
-    if llmClientConfigVar is AzureOpenAIClientConfig {
-        AzureOpenAIClientConfig {serviceUrl, connectionConfig} = llmClientConfigVar;
-        chatClient = check new azureOpenAIChat:Client(connectionConfig, serviceUrl);
-        llmFunc = callAzureOpenAI;
+    if defaultModelConfigVar is DefaultAzureOpenAIModelConfig {
+        defaultModel = check new AzureOpenAIModel({
+            connectionConfig: defaultModelConfigVar.connectionConfig,
+            serviceUrl: defaultModelConfigVar.serviceUrl
+        }, defaultModelConfigVar.deploymentId, defaultModelConfigVar.apiVersion);
         return;
     }
 
-    // OpenAIClientConfig
-    OpenAIClientConfig {serviceUrl, connectionConfig} = llmClientConfigVar;
-    chatClient = check (serviceUrl is () ? 
-                            new openAIChat:Client(connectionConfig) : 
-                            new openAIChat:Client(connectionConfig, serviceUrl));
-    llmFunc = callOpenAI;
-    return;
+    string? serviceUrl = defaultModelConfigVar?.serviceUrl;
+    defaultModel = serviceUrl is () ?
+                    check new OpenAIModel({
+                            connectionConfig: defaultModelConfigVar.connectionConfig
+                        }, defaultModelConfigVar.model) :
+                    check new OpenAIModel({
+                            connectionConfig: defaultModelConfigVar.connectionConfig,
+                            serviceUrl
+                        }, defaultModelConfigVar.model);
+}
+
+isolated function getDefaultModel() returns Model {
+    final Model? defaultModelVar = defaultModel;
+    if defaultModelVar is () {
+        panic error("Default model is not initialized");
+    }
+    return defaultModelVar;
 }
 
 isolated function buildPromptString(Prompt prompt, typedesc<anydata> td) returns string {
@@ -50,6 +69,9 @@ isolated function buildPromptString(Prompt prompt, typedesc<anydata> td) returns
     foreach int i in 0 ..< insertions.length() {
         str = str + insertions[i].toString() + prompt.strings[i + 1];
     }
+
+    // TODO: handle xml
+    
     return string `${str}.  
         The output should be a JSON value that satisfies the following JSON schema, 
         returned within a markdown snippet enclosed within ${"```json"} and ${"```"}
@@ -58,10 +80,12 @@ isolated function buildPromptString(Prompt prompt, typedesc<anydata> td) returns
         ${generateJsonSchemaForTypedescAsString(td)}`;
 }
 
-isolated function callLlmBal(Prompt prompt, typedesc<anydata> td) returns anydata|error {
-    (isolated function (Prompt, typedesc<anydata>) returns anydata|error)? llmFuncVar = llmFunc;
-    if llmFuncVar is () {
-        panic error("LLM configuration is not provided to use with LLM calls");
-    }
-    return llmFuncVar(prompt, td);
+isolated function callLlmBal(Prompt prompt, Model model, typedesc<anydata> td) returns anydata|error {
+    string resp = check model->call(prompt, td);
+    return parseResponse(resp, td);
+}
+
+isolated function parseResponse(string resp, typedesc<anydata> td) returns anydata|error {
+    string processedResponse = re `${"```json|```"}`.replaceAll(resp, "");
+    return processedResponse.fromJsonStringWithType(td);
 }

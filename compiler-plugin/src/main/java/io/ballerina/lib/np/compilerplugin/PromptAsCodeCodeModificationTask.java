@@ -18,8 +18,10 @@
 
 package io.ballerina.lib.np.compilerplugin;
 
+import io.ballerina.compiler.syntax.tree.DefaultableParameterNode;
 import io.ballerina.compiler.syntax.tree.ExpressionFunctionBodyNode;
 import io.ballerina.compiler.syntax.tree.ExternalFunctionBodyNode;
+import io.ballerina.compiler.syntax.tree.FunctionArgumentNode;
 import io.ballerina.compiler.syntax.tree.FunctionBodyNode;
 import io.ballerina.compiler.syntax.tree.FunctionCallExpressionNode;
 import io.ballerina.compiler.syntax.tree.FunctionDefinitionNode;
@@ -30,7 +32,9 @@ import io.ballerina.compiler.syntax.tree.ImportPrefixNode;
 import io.ballerina.compiler.syntax.tree.ModuleMemberDeclarationNode;
 import io.ballerina.compiler.syntax.tree.ModulePartNode;
 import io.ballerina.compiler.syntax.tree.NodeFactory;
+import io.ballerina.compiler.syntax.tree.ParameterNode;
 import io.ballerina.compiler.syntax.tree.QualifiedNameReferenceNode;
+import io.ballerina.compiler.syntax.tree.RequiredParameterNode;
 import io.ballerina.compiler.syntax.tree.SeparatedNodeList;
 import io.ballerina.compiler.syntax.tree.SimpleNameReferenceNode;
 import io.ballerina.compiler.syntax.tree.SyntaxKind;
@@ -51,7 +55,9 @@ import java.util.Optional;
 
 import static io.ballerina.compiler.syntax.tree.AbstractNodeFactory.createToken;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.CLOSE_PAREN_TOKEN;
+import static io.ballerina.compiler.syntax.tree.SyntaxKind.DEFAULTABLE_PARAM;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.OPEN_PAREN_TOKEN;
+import static io.ballerina.compiler.syntax.tree.SyntaxKind.REQUIRED_PARAM;
 
 /**
  * Code modification task to replace runtime prompt as code external functions with np:call.
@@ -65,14 +71,18 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
     private static final Token SEMICOLON = createToken(SyntaxKind.SEMICOLON_TOKEN);
     private static final Token COLON = createToken(SyntaxKind.COLON_TOKEN);
     private static final Token RIGHT_DOUBLE_ARROW = createToken(SyntaxKind.RIGHT_DOUBLE_ARROW_TOKEN);
+    private static final Token COMMA = createToken(SyntaxKind.COMMA_TOKEN);
 
-    private static final String PROMPT = "prompt";
+    private static final String PROMPT_VAR = "prompt";
+    private static final String MODEL_VAR = "model";
     private static final String ORG_NAME = "ballerinax";
     private static final String MODULE_NAME = "np";
     private static final String LLM_CALL_ANNOT = "LlmCall";
 
     private static final SimpleNameReferenceNode PROMPT_NAME_REF_NODE =
-            NodeFactory.createSimpleNameReferenceNode(NodeFactory.createIdentifierToken(PROMPT));
+            NodeFactory.createSimpleNameReferenceNode(NodeFactory.createIdentifierToken(PROMPT_VAR));
+    private static final SimpleNameReferenceNode MODEL_NAME_REF_NODE =
+            NodeFactory.createSimpleNameReferenceNode(NodeFactory.createIdentifierToken(MODEL_VAR));
 
     @Override
     public void modify(SourceModifierContext modifierContext) {
@@ -142,23 +152,48 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
             if (hasAnnotation(functionBody, npPrefix, LLM_CALL_ANNOT)) {
                 ExpressionFunctionBodyNode expressionFunctionBody =
                         NodeFactory.createExpressionFunctionBodyNode(
-                                RIGHT_DOUBLE_ARROW, createNPCallFunctionCallExpression(npPrefix), SEMICOLON);
+                                RIGHT_DOUBLE_ARROW,
+                                createNPCallFunctionCallExpression(npPrefix, hasModelParam(functionDefinition)),
+                                SEMICOLON);
                 return functionDefinition.modify().withFunctionBody(expressionFunctionBody).apply();
             }
 
             return functionDefinition;
         }
+
+        private boolean hasModelParam(FunctionDefinitionNode functionDefinition) {
+            for (ParameterNode parameter : functionDefinition.functionSignature().parameters()) {
+                SyntaxKind kind = parameter.kind();
+                if (kind == REQUIRED_PARAM &&
+                        MODEL_VAR.equals(((RequiredParameterNode) parameter).paramName().get().text())) {
+                    return true;
+                }
+
+                if (kind == DEFAULTABLE_PARAM &&
+                        MODEL_VAR.equals(((DefaultableParameterNode) parameter).paramName().get().text())) {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 
-    private static FunctionCallExpressionNode createNPCallFunctionCallExpression(String npPrefix) {
+    private static FunctionCallExpressionNode createNPCallFunctionCallExpression(String npPrefix,
+                                                                                 boolean hasModelParam) {
+        SeparatedNodeList<FunctionArgumentNode> arguments =
+                hasModelParam ?
+                        NodeFactory.createSeparatedNodeList(
+                                NodeFactory.createPositionalArgumentNode(PROMPT_NAME_REF_NODE),
+                                COMMA,
+                                NodeFactory.createPositionalArgumentNode(MODEL_NAME_REF_NODE)
+                        ) :
+                        NodeFactory.createSeparatedNodeList(
+                                NodeFactory.createPositionalArgumentNode(PROMPT_NAME_REF_NODE)
+                        );
         return NodeFactory.createFunctionCallExpressionNode(
                 createNPCallQualifiedNameReferenceNode(npPrefix),
                 OPEN_PAREN,
-                NodeFactory.createSeparatedNodeList(
-                        NodeFactory.createPositionalArgumentNode(
-                                PROMPT_NAME_REF_NODE
-                        )
-                ),
+                arguments,
                 CLOSE_PAREN
         );
     }

@@ -1,28 +1,40 @@
 import ballerinax/openai.chat as openAIChat;
 
-type OpenAIClientConfig record {|
+public type OpenAIModelConfig record {|
     openAIChat:ConnectionConfig connectionConfig;
     string serviceUrl?;
-    string model;
 |};
 
-isolated function callOpenAI(Prompt prompt, typedesc<anydata> td) returns anydata|error {
-    openAIChat:Client openAIClient = <openAIChat:Client> chatClient;
-    OpenAIClientConfig {model} = <OpenAIClientConfig> llmClientConfig;
+public isolated distinct client class OpenAIModel {
+    *Model;
 
-    openAIChat:CreateChatCompletionRequest chatBody = {
-        messages: [{role: "user", "content": buildPromptString(prompt, td)}],
-        model
-    };
+    private final openAIChat:Client cl;
+    private final string model;
 
-    openAIChat:CreateChatCompletionResponse chatResult = check openAIClient->/chat/completions.post(chatBody);
-    openAIChat:CreateChatCompletionResponse_choices[] choices = chatResult.choices;
-
-    string? resp = choices[0].message?.content;
-    if resp is () {
-        return error("No completion found");
+    public isolated function init(openAIChat:Client|OpenAIModelConfig openAI, string model) returns error? {
+        self.cl = openAI is openAIChat:Client ?
+            openAI :
+            let string? serviceUrl = openAI?.serviceUrl in
+                    serviceUrl is () ?
+                    check new (openAI.connectionConfig) :
+                    check new (openAI.connectionConfig, serviceUrl);
+        self.model = model;
     }
 
-    string processedResponse = re `${"```json|```"}`.replaceAll(resp, "");
-    return processedResponse.fromJsonStringWithType(td);
+    isolated remote function call(Prompt prompt, typedesc<anydata> td) returns string|error {
+        openAIChat:CreateChatCompletionRequest chatBody = {
+            messages: [{role: "user", "content": buildPromptString(prompt, td)}],
+            model: self.model
+        };
+
+        openAIChat:CreateChatCompletionResponse chatResult =
+            check self.cl->/chat/completions.post(chatBody);
+        openAIChat:CreateChatCompletionResponse_choices[] choices = chatResult.choices;
+
+        string? resp = choices[0].message?.content;
+        if resp is () {
+            return error("No completion found");
+        }
+        return resp;
+    }
 }

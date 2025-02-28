@@ -37,9 +37,9 @@ import io.ballerina.runtime.api.values.BTypedesc;
  * @since 0.3.0
  */
 public class Native {
-    public static Object callLlmCallBallerinaFunction(Environment env, BObject prompt, BTypedesc td) {
+    public static Object callLlmCallBallerinaFunction(Environment env, BObject prompt, BObject model, BTypedesc td) {
         return env.getRuntime().callFunction(
-                new Module("ballerinax", "np", "0"), "callLlmBal", null, prompt, td);
+                new Module("ballerinax", "np", "0"), "callLlmBal", null, prompt, model, td);
     }
 
     // Simple, simple, SIMPLE implementation for now.

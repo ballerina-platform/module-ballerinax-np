@@ -16,7 +16,7 @@
 
 import ballerina/jballerina.java;
 
-configurable AzureOpenAIClientConfig|OpenAIClientConfig? llmClientConfig = ();
+configurable DefaultModelConfig? defaultModelConfig = ();
 
 public type Prompt object {
     *object:RawTemplate;
@@ -24,10 +24,15 @@ public type Prompt object {
     public anydata[] insertions;
 };
 
-public isolated function callLlm(Prompt prompt, typedesc<anydata> td = <>) 
+public isolated function callLlm(Prompt prompt, Model model = getDefaultModel(), 
+                                 typedesc<anydata> td = <>) 
         returns td|error = @java:Method {
     name: "callLlmCallBallerinaFunction",
     'class: "io.ballerina.lib.np.Native"
 } external;
 
 public const annotation LlmCall on source external;
+
+public type Model distinct isolated client object {
+   isolated remote function call(Prompt prompt, typedesc<anydata> td) returns string|error;
+};

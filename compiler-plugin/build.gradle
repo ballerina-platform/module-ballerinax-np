@@ -23,7 +23,9 @@ plugins {
 }
 
 description = 'Ballerina - Natural Programming Compiler Plugin'
-
+configurations {
+    externalJars
+}
 dependencies {
     checkstyle project(':checkstyle')
     checkstyle "com.puppycrawl.tools:checkstyle:${puppycrawlCheckstyleVersion}"
@@ -33,6 +35,11 @@ dependencies {
     implementation group: 'org.ballerinalang', name: 'ballerina-parser', version: "${ballerinaLangTimestampedVersion}"
     implementation group: 'org.ballerinalang', name: 'formatter-core', version: "${ballerinaLangTimestampedVersion}"
     implementation group: 'com.google.code.gson', name: 'gson', version: "${gsonVersion}"
+    implementation group: 'io.ballerina.openapi', name: 'ballerina-to-openapi', version: "${ballerinaToOpenApiVersion}"
+    implementation group: 'io.swagger.core.v3', name: 'swagger-core', version: "${swaggerVersion}"
+    implementation group: 'io.swagger.core.v3', name: 'swagger-models', version: "${swaggerVersion}"
+    implementation project(":np-native")
+    externalJars group: 'io.ballerina.openapi', name: 'ballerina-to-openapi', version: "${ballerinaToOpenApiVersion}"
 }
 
 def excludePattern = '**/module-info.java'

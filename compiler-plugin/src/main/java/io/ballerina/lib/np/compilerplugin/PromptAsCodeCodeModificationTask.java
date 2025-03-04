@@ -58,6 +58,11 @@ import static io.ballerina.compiler.syntax.tree.SyntaxKind.CLOSE_PAREN_TOKEN;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.DEFAULTABLE_PARAM;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.OPEN_PAREN_TOKEN;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.REQUIRED_PARAM;
+import static io.ballerina.lib.np.compilerplugin.Commons.MODEL_VAR;
+import static io.ballerina.lib.np.compilerplugin.Commons.MODULE_NAME;
+import static io.ballerina.lib.np.compilerplugin.Commons.ORG_NAME;
+import static io.ballerina.lib.np.compilerplugin.Commons.PROMPT_VAR;
+import static io.ballerina.lib.np.compilerplugin.Commons.hasLlmCallAnnotation;
 
 /**
  * Code modification task to replace runtime prompt as code external functions with np:call.
@@ -73,20 +78,25 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
     private static final Token RIGHT_DOUBLE_ARROW = createToken(SyntaxKind.RIGHT_DOUBLE_ARROW_TOKEN);
     private static final Token COMMA = createToken(SyntaxKind.COMMA_TOKEN);
 
-    private static final String PROMPT_VAR = "prompt";
-    private static final String MODEL_VAR = "model";
-    private static final String ORG_NAME = "ballerinax";
-    private static final String MODULE_NAME = "np";
-    private static final String LLM_CALL_ANNOT = "LlmCall";
-
     private static final SimpleNameReferenceNode PROMPT_NAME_REF_NODE =
             NodeFactory.createSimpleNameReferenceNode(NodeFactory.createIdentifierToken(PROMPT_VAR));
     private static final SimpleNameReferenceNode MODEL_NAME_REF_NODE =
             NodeFactory.createSimpleNameReferenceNode(NodeFactory.createIdentifierToken(MODEL_VAR));
 
+    private final CodeModifier.AnalysisTaskStatus analysisTaskStatus;
+
+    PromptAsCodeCodeModificationTask(CodeModifier.AnalysisTaskStatus analysisTaskStatus) {
+        this.analysisTaskStatus = analysisTaskStatus;
+    }
+
     @Override
     public void modify(SourceModifierContext modifierContext) {
         Package currentPackage = modifierContext.currentPackage();
+
+        if (this.analysisTaskStatus.errored) {
+            return;
+        }
+
         for (ModuleId moduleId : currentPackage.moduleIds()) {
             Module module = currentPackage.module(moduleId);
 
@@ -149,7 +159,7 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
                 return functionDefinition;
             }
 
-            if (hasAnnotation(functionBody, npPrefix, LLM_CALL_ANNOT)) {
+            if (hasLlmCallAnnotation(functionBody, npPrefix)) {
                 ExpressionFunctionBodyNode expressionFunctionBody =
                         NodeFactory.createExpressionFunctionBodyNode(
                                 RIGHT_DOUBLE_ARROW,
@@ -165,12 +175,12 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
             for (ParameterNode parameter : functionDefinition.functionSignature().parameters()) {
                 SyntaxKind kind = parameter.kind();
                 if (kind == REQUIRED_PARAM &&
-                        MODEL_VAR.equals(((RequiredParameterNode) parameter).paramName().get().text())) {
+                        Commons.MODEL_VAR.equals(((RequiredParameterNode) parameter).paramName().get().text())) {
                     return true;
                 }
 
                 if (kind == DEFAULTABLE_PARAM &&
-                        MODEL_VAR.equals(((DefaultableParameterNode) parameter).paramName().get().text())) {
+                        Commons.MODEL_VAR.equals(((DefaultableParameterNode) parameter).paramName().get().text())) {
                     return true;
                 }
             }
@@ -196,14 +206,6 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
                 arguments,
                 CLOSE_PAREN
         );
-    }
-
-    private static boolean hasAnnotation(ExternalFunctionBodyNode functionBody, String modulePrefix,
-                                         String annotation) {
-        final String annotationRef = modulePrefix + ":" + annotation;
-        return functionBody.annotations().stream().
-                anyMatch(annotationNode -> annotationNode.annotReference().toString().trim()
-                        .equals(annotationRef));
     }
 
     private static QualifiedNameReferenceNode createNPCallQualifiedNameReferenceNode(String npPrefix) {

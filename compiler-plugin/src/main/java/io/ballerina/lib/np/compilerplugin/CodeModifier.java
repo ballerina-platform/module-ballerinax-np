@@ -18,10 +18,11 @@
 
 package io.ballerina.lib.np.compilerplugin;
 
+import io.ballerina.compiler.syntax.tree.SyntaxKind;
 import io.ballerina.projects.plugins.CodeModifierContext;
 
 /**
- * Natural programming code analyzer.
+ * Natural programming code modifier.
  *
  * @since 0.3.0
  */
@@ -29,6 +30,12 @@ public class CodeModifier extends io.ballerina.projects.plugins.CodeModifier {
 
     @Override
     public void init(CodeModifierContext modifierContext) {
-        modifierContext.addSourceModifierTask(new PromptAsCodeCodeModificationTask());
+        AnalysisTaskStatus analysisTaskStatus = new AnalysisTaskStatus();
+        modifierContext.addSyntaxNodeAnalysisTask(new NPFunctionValidator(analysisTaskStatus), SyntaxKind.MODULE_PART);
+        modifierContext.addSourceModifierTask(new PromptAsCodeCodeModificationTask(analysisTaskStatus));
+    }
+
+    static final class AnalysisTaskStatus {
+        boolean errored = false;
     }
 }

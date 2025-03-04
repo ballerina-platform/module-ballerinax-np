@@ -29,7 +29,6 @@ public class CompilerPlugin extends io.ballerina.projects.plugins.CompilerPlugin
 
     @Override
     public void init(CompilerPluginContext compilerPluginContext) {
-        compilerPluginContext.addCodeAnalyzer(new CodeAnalyzer());
         compilerPluginContext.addCodeModifier(new CodeModifier());
     }
 }

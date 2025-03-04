@@ -21,6 +21,9 @@ package io.ballerina.lib.np.compilerplugin;
 import io.ballerina.compiler.syntax.tree.SyntaxKind;
 import io.ballerina.projects.plugins.CodeModifierContext;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Natural programming code modifier.
  *
@@ -30,12 +33,14 @@ public class CodeModifier extends io.ballerina.projects.plugins.CodeModifier {
 
     @Override
     public void init(CodeModifierContext modifierContext) {
-        AnalysisTaskStatus analysisTaskStatus = new AnalysisTaskStatus();
-        modifierContext.addSyntaxNodeAnalysisTask(new NPFunctionValidator(analysisTaskStatus), SyntaxKind.MODULE_PART);
-        modifierContext.addSourceModifierTask(new PromptAsCodeCodeModificationTask(analysisTaskStatus));
+        AnalysisData analysisData = new AnalysisData();
+        modifierContext.addSyntaxNodeAnalysisTask(new NPFunctionValidator(analysisData), SyntaxKind.MODULE_PART);
+        modifierContext.addSyntaxNodeAnalysisTask(new ToolAnnotationAnalysisTask(analysisData), SyntaxKind.MODULE_PART);
+        modifierContext.addSourceModifierTask(new PromptAsCodeCodeModificationTask(analysisData));
     }
 
-    static final class AnalysisTaskStatus {
+    static final class AnalysisData {
         boolean errored = false;
+        Map<String, String> typeSchemas = new HashMap<>();
     }
 }

@@ -18,6 +18,8 @@
 
 package io.ballerina.lib.np.compilerplugin;
 
+import io.ballerina.compiler.syntax.tree.AbstractNodeFactory;
+import io.ballerina.compiler.syntax.tree.AnnotationNode;
 import io.ballerina.compiler.syntax.tree.DefaultableParameterNode;
 import io.ballerina.compiler.syntax.tree.ExpressionFunctionBodyNode;
 import io.ballerina.compiler.syntax.tree.ExternalFunctionBodyNode;
@@ -29,17 +31,23 @@ import io.ballerina.compiler.syntax.tree.IdentifierToken;
 import io.ballerina.compiler.syntax.tree.ImportDeclarationNode;
 import io.ballerina.compiler.syntax.tree.ImportOrgNameNode;
 import io.ballerina.compiler.syntax.tree.ImportPrefixNode;
-import io.ballerina.compiler.syntax.tree.ModuleMemberDeclarationNode;
+import io.ballerina.compiler.syntax.tree.MappingConstructorExpressionNode;
+import io.ballerina.compiler.syntax.tree.MappingFieldNode;
+import io.ballerina.compiler.syntax.tree.MetadataNode;
 import io.ballerina.compiler.syntax.tree.ModulePartNode;
 import io.ballerina.compiler.syntax.tree.NodeFactory;
+import io.ballerina.compiler.syntax.tree.NodeList;
+import io.ballerina.compiler.syntax.tree.NodeParser;
 import io.ballerina.compiler.syntax.tree.ParameterNode;
 import io.ballerina.compiler.syntax.tree.QualifiedNameReferenceNode;
 import io.ballerina.compiler.syntax.tree.RequiredParameterNode;
 import io.ballerina.compiler.syntax.tree.SeparatedNodeList;
 import io.ballerina.compiler.syntax.tree.SimpleNameReferenceNode;
+import io.ballerina.compiler.syntax.tree.SpecificFieldNode;
 import io.ballerina.compiler.syntax.tree.SyntaxKind;
 import io.ballerina.compiler.syntax.tree.Token;
 import io.ballerina.compiler.syntax.tree.TreeModifier;
+import io.ballerina.compiler.syntax.tree.TypeDefinitionNode;
 import io.ballerina.projects.Document;
 import io.ballerina.projects.DocumentId;
 import io.ballerina.projects.Module;
@@ -49,8 +57,6 @@ import io.ballerina.projects.plugins.ModifierTask;
 import io.ballerina.projects.plugins.SourceModifierContext;
 import io.ballerina.tools.text.TextDocument;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 import static io.ballerina.compiler.syntax.tree.AbstractNodeFactory.createToken;
@@ -58,10 +64,11 @@ import static io.ballerina.compiler.syntax.tree.SyntaxKind.CLOSE_PAREN_TOKEN;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.DEFAULTABLE_PARAM;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.OPEN_PAREN_TOKEN;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.REQUIRED_PARAM;
-import static io.ballerina.lib.np.compilerplugin.Commons.MODEL_VAR;
-import static io.ballerina.lib.np.compilerplugin.Commons.MODULE_NAME;
-import static io.ballerina.lib.np.compilerplugin.Commons.ORG_NAME;
-import static io.ballerina.lib.np.compilerplugin.Commons.PROMPT_VAR;
+import static io.ballerina.lib.np.compilerplugin.Constants.CALL_LLM;
+import static io.ballerina.lib.np.compilerplugin.Constants.MODEL_VAR;
+import static io.ballerina.lib.np.compilerplugin.Constants.MODULE_NAME;
+import static io.ballerina.lib.np.compilerplugin.Constants.ORG_NAME;
+import static io.ballerina.lib.np.compilerplugin.Constants.PROMPT_VAR;
 import static io.ballerina.lib.np.compilerplugin.Commons.hasLlmCallAnnotation;
 
 /**
@@ -83,17 +90,17 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
     private static final SimpleNameReferenceNode MODEL_NAME_REF_NODE =
             NodeFactory.createSimpleNameReferenceNode(NodeFactory.createIdentifierToken(MODEL_VAR));
 
-    private final CodeModifier.AnalysisTaskStatus analysisTaskStatus;
+    private final CodeModifier.AnalysisData analysisData;
 
-    PromptAsCodeCodeModificationTask(CodeModifier.AnalysisTaskStatus analysisTaskStatus) {
-        this.analysisTaskStatus = analysisTaskStatus;
+    PromptAsCodeCodeModificationTask(CodeModifier.AnalysisData analysisData) {
+        this.analysisData = analysisData;
     }
 
     @Override
     public void modify(SourceModifierContext modifierContext) {
         Package currentPackage = modifierContext.currentPackage();
 
-        if (this.analysisTaskStatus.errored) {
+        if (this.analysisData.errored) {
             return;
         }
 
@@ -103,24 +110,29 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
             for (DocumentId documentId: module.documentIds()) {
                 Document document = module.document(documentId);
                 modifierContext.modifySourceFile(
-                        modifyDocument(document), documentId);
+                        modifyDocument(document, analysisData), documentId);
             }
 
             for (DocumentId documentId: module.testDocumentIds()) {
                 Document document = module.document(documentId);
                 modifierContext.modifyTestSourceFile(
-                        modifyDocument(document), documentId);
+                        modifyDocument(document, analysisData), documentId);
             }
         }
     }
 
-    private static TextDocument modifyDocument(Document document) {
+    private static TextDocument modifyDocument(Document document, CodeModifier.AnalysisData analysisData) {
         ModulePartNode modulePartNode = document.syntaxTree().rootNode();
-        List<ModuleMemberDeclarationNode> newMembers = new ArrayList<>();
         FunctionModifier functionModifier = new FunctionModifier();
-        ModulePartNode newRoot = (ModulePartNode) modulePartNode.apply(functionModifier);
-        newRoot = newRoot.modify(newRoot.imports(), newRoot.members().addAll(newMembers), newRoot.eofToken());
-        return document.syntaxTree().modifyWith(newRoot).textDocument();
+        TypeDefinitionModifier typeDefinitionModifier = new TypeDefinitionModifier(analysisData);
+
+        ModulePartNode modifiedRoot = (ModulePartNode) modulePartNode.apply(functionModifier);
+        modifiedRoot = modifiedRoot.modify(modifiedRoot.imports(), modifiedRoot.members(), modifiedRoot.eofToken());
+
+        ModulePartNode finalRoot = (ModulePartNode) modifiedRoot.apply(typeDefinitionModifier);
+        finalRoot = finalRoot.modify(finalRoot.imports(), finalRoot.members(), finalRoot.eofToken());
+
+        return document.syntaxTree().modifyWith(finalRoot).textDocument();
     }
 
     private static class FunctionModifier extends TreeModifier {
@@ -175,12 +187,12 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
             for (ParameterNode parameter : functionDefinition.functionSignature().parameters()) {
                 SyntaxKind kind = parameter.kind();
                 if (kind == REQUIRED_PARAM &&
-                        Commons.MODEL_VAR.equals(((RequiredParameterNode) parameter).paramName().get().text())) {
+                        Constants.MODEL_VAR.equals(((RequiredParameterNode) parameter).paramName().get().text())) {
                     return true;
                 }
 
                 if (kind == DEFAULTABLE_PARAM &&
-                        Commons.MODEL_VAR.equals(((DefaultableParameterNode) parameter).paramName().get().text())) {
+                        Constants.MODEL_VAR.equals(((DefaultableParameterNode) parameter).paramName().get().text())) {
                     return true;
                 }
             }
@@ -212,7 +224,81 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
         return NodeFactory.createQualifiedNameReferenceNode(
                 NodeFactory.createIdentifierToken(npPrefix),
                 COLON,
-                NodeFactory.createIdentifierToken("callLlm")
+                NodeFactory.createIdentifierToken(CALL_LLM)
+        );
+    }
+
+    private static class TypeDefinitionModifier extends TreeModifier {
+
+        private final CodeModifier.AnalysisData analysisData;
+
+        TypeDefinitionModifier(CodeModifier.AnalysisData analysisData) {
+            this.analysisData = analysisData;
+        }
+
+        @Override
+        public TypeDefinitionNode transform(TypeDefinitionNode typeDefinitionNode) {
+            String typeName = typeDefinitionNode.typeName().text();
+
+            if (!analysisData.typeSchemas.containsKey(typeName)) {
+                return typeDefinitionNode;
+            }
+
+            MetadataNode updatedMetadataNode = updateMetadata(typeDefinitionNode, analysisData.typeSchemas.get(typeName));
+            return typeDefinitionNode.modify().withMetadata(updatedMetadataNode).apply();
+        }
+
+        private MetadataNode updateMetadata(TypeDefinitionNode typeDefinitionNode, String schema) {
+            MetadataNode metadataNode = getMetadataNode(typeDefinitionNode);
+            NodeList<AnnotationNode> updatedAnnotations = updateAnnotations(metadataNode.annotations(), schema);
+            return metadataNode.modify().withAnnotations(updatedAnnotations).apply();
+        }
+    }
+
+    public static MetadataNode getMetadataNode(TypeDefinitionNode serviceNode) {
+        return serviceNode.metadata().orElseGet(() -> {
+            NodeList<AnnotationNode> annotations = NodeFactory.createNodeList();
+            return NodeFactory.createMetadataNode(null, annotations);
+        });
+    }
+
+    private static NodeList<AnnotationNode> updateAnnotations(NodeList<AnnotationNode> currentAnnotations, String jsonSchema) {
+        NodeList<AnnotationNode> updatedAnnotations = NodeFactory.createNodeList();
+
+        if (currentAnnotations.isEmpty()) {
+            updatedAnnotations = updatedAnnotations.add(getSchemaAnnotation(jsonSchema));
+        }
+
+        return updatedAnnotations;
+    }
+
+    public static AnnotationNode getSchemaAnnotation(String jsonSchema) {
+        String configIdentifierString = Constants.NP + Constants.COLON + Constants.SCHEMA_ANNOTATION_IDENTIFIER;
+        IdentifierToken identifierToken = NodeFactory.createIdentifierToken(configIdentifierString);
+
+        return NodeFactory.createAnnotationNode(
+                NodeFactory.createToken(SyntaxKind.AT_TOKEN),
+                NodeFactory.createSimpleNameReferenceNode(identifierToken),
+                getAnnotationExpression(jsonSchema)
+        );
+    }
+
+    public static MappingConstructorExpressionNode getAnnotationExpression(String jsonSchema) {
+        SeparatedNodeList<MappingFieldNode> separatedNodeList = NodeFactory.createSeparatedNodeList(createSchemaField(jsonSchema));
+
+        return NodeFactory.createMappingConstructorExpressionNode(
+                NodeFactory.createToken(SyntaxKind.OPEN_BRACE_TOKEN),
+                separatedNodeList,
+                NodeFactory.createToken(SyntaxKind.CLOSE_BRACE_TOKEN)
+        );
+    }
+
+    public static SpecificFieldNode createSchemaField(String jsonSchema) {
+        return NodeFactory.createSpecificFieldNode(
+                null,
+                AbstractNodeFactory.createIdentifierToken(Constants.SCHEMA),
+                AbstractNodeFactory.createToken(SyntaxKind.COLON_TOKEN),
+                NodeParser.parseExpression(jsonSchema)
         );
     }
 }

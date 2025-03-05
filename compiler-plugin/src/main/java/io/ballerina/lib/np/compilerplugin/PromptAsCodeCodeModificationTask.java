@@ -244,7 +244,8 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
                 return typeDefinitionNode;
             }
 
-            MetadataNode updatedMetadataNode = updateMetadata(typeDefinitionNode, analysisData.typeSchemas.get(typeName));
+            MetadataNode updatedMetadataNode =
+                                            updateMetadata(typeDefinitionNode, analysisData.typeSchemas.get(typeName));
             return typeDefinitionNode.modify().withMetadata(updatedMetadataNode).apply();
         }
 
@@ -262,7 +263,8 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
         });
     }
 
-    private static NodeList<AnnotationNode> updateAnnotations(NodeList<AnnotationNode> currentAnnotations, String jsonSchema) {
+    private static NodeList<AnnotationNode> updateAnnotations(NodeList<AnnotationNode> currentAnnotations,
+                                                              String jsonSchema) {
         NodeList<AnnotationNode> updatedAnnotations = NodeFactory.createNodeList();
 
         if (currentAnnotations.isEmpty()) {
@@ -284,7 +286,8 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
     }
 
     public static MappingConstructorExpressionNode getAnnotationExpression(String jsonSchema) {
-        SeparatedNodeList<MappingFieldNode> separatedNodeList = NodeFactory.createSeparatedNodeList(createSchemaField(jsonSchema));
+        SeparatedNodeList<MappingFieldNode> separatedNodeList =
+                                            NodeFactory.createSeparatedNodeList(createSchemaField(jsonSchema));
 
         return NodeFactory.createMappingConstructorExpressionNode(
                 NodeFactory.createToken(SyntaxKind.OPEN_BRACE_TOKEN),

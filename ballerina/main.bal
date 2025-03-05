@@ -46,13 +46,13 @@ function init() returns error? {
 
     string? serviceUrl = defaultModelConfigVar?.serviceUrl;
     defaultModel = serviceUrl is () ?
-                    check new OpenAIModel({
-                            connectionConfig: defaultModelConfigVar.connectionConfig
-                        }, defaultModelConfigVar.model) :
-                    check new OpenAIModel({
-                            connectionConfig: defaultModelConfigVar.connectionConfig,
-                            serviceUrl
-                        }, defaultModelConfigVar.model);
+        check new OpenAIModel({
+            connectionConfig: defaultModelConfigVar.connectionConfig
+        }, defaultModelConfigVar.model) :
+        check new OpenAIModel({
+            connectionConfig: defaultModelConfigVar.connectionConfig,
+            serviceUrl
+        }, defaultModelConfigVar.model);
 }
 
 isolated function getDefaultModel() returns Model {
@@ -69,7 +69,7 @@ isolated function buildPromptString(Prompt prompt, typedesc<json> td) returns st
     foreach int i in 0 ..< insertions.length() {
         str = str + insertions[i].toString() + prompt.strings[i + 1];
     }
-    
+
     return string `${str}.  
         The output should be a JSON value that satisfies the following JSON schema, 
         returned within a markdown snippet enclosed within ${"```json"} and ${"```"}

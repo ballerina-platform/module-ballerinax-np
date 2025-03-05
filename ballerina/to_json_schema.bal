@@ -31,7 +31,8 @@ type JsonArraySchema record {|
 
 isolated function generateJsonSchemaForTypedescAsString(typedesc<json> td) returns string =>
     generateJsonSchemaForTypedesc(td, containsNil(td)).toJsonString();
-isolated function generateJsonSchemaForTypedesc(typedesc<json> td,  boolean nilableType) returns JsonSchema|JsonArraySchema {
+
+isolated function generateJsonSchemaForTypedesc(typedesc<json> td, boolean nilableType) returns JsonSchema|JsonArraySchema {
     if isSimpleType(td) {
         return {
             'type: getStringRepresentation(<typedesc<json>>td)
@@ -49,8 +50,8 @@ isolated function generateJsonSchemaForTypedesc(typedesc<json> td,  boolean nila
                 \$schema: "https://json-schema.org/draft/2020-12/schema",
                 items: {
                     'type: nilableType ?
-                         [getStringRepresentation(<typedesc<json>>arrayMemberType), "null"] :
-                         [getStringRepresentation(<typedesc<json>>arrayMemberType)]
+                        [getStringRepresentation(<typedesc<json>>arrayMemberType), "null"] :
+                        [getStringRepresentation(<typedesc<json>>arrayMemberType)]
                 }
             };
         }
@@ -105,7 +106,7 @@ isolated function generateJsonSchema(string[] names, boolean[] required,
     }
 
     if isArray {
-        return <JsonArraySchema> {
+        return <JsonArraySchema>{
             \$schema: "https://json-schema.org/draft/2020-12/schema",
             items: schema,
             'type: nilableType ? ["array", "null"] : "array"
@@ -117,7 +118,7 @@ isolated function generateJsonSchema(string[] names, boolean[] required,
 
 isolated function getJsonSchemaType(typedesc<json> fieldType, boolean nilable) returns JsonSchema|JsonArraySchema {
     if isSimpleType(fieldType) {
-        return nilable ? 
+        return nilable ?
             {
                 'type: [getStringRepresentation(fieldType), "null"]
             } :

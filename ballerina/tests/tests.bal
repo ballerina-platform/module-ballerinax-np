@@ -53,11 +53,11 @@ function testPromptAsCodeFunctionWithSimpleExpectedTypeWithDefaultAzureOpenAICli
 @test:Config
 function testPromptAsCodeFunctionWithStructuredExpectedTypeWithOpenAIClient() returns error? {
     Model model = check new OpenAIModel({
-            connectionConfig: {
-                auth: {token: "not-a-real-token"}
-            },
-            serviceUrl: "http://localhost:8080/llm/openai"
-        }, "gpt4o");
+        connectionConfig: {
+            auth: {token: "not-a-real-token"}
+        },
+        serviceUrl: "http://localhost:8080/llm/openai"
+    }, "gpt4o");
     Review review = check callLlm(`Rate this blog out of 10.
         Title: ${blog2.title}
         Content: ${blog2.content}`, model);
@@ -76,7 +76,7 @@ type Review record {|
 
 service /llm on new http:Listener(8080) {
     resource function post azureopenai/deployments/gpt4onew/chat/completions(
-            string api\-version, azureOpenAIChat:CreateChatCompletionRequest payload) 
+            string api\-version, azureOpenAIChat:CreateChatCompletionRequest payload)
                 returns json {
         test:assertEquals(api\-version, "2023-08-01-preview");
         string expectedPromptString = string `Rate this blog out of 10.
@@ -95,7 +95,10 @@ service /llm on new http:Listener(8080) {
         test:assertEquals(message.role, "user");
         test:assertEquals(message["content"], expectedPromptString);
         return {
-            'object: "chat.completion", created: 0, model: "", id: "",
+            'object: "chat.completion",
+            created: 0,
+            model: "",
+            id: "",
             choices: [
                 {
                     message: {
@@ -106,7 +109,7 @@ service /llm on new http:Listener(8080) {
         };
     }
 
-    resource function post openai/chat/completions(openAIChat:CreateChatCompletionRequest payload) 
+    resource function post openai/chat/completions(openAIChat:CreateChatCompletionRequest payload)
             returns json {
         string expectedPromptString = string `Rate this blog out of 10.
         Title: ${blog2.title}
@@ -122,16 +125,22 @@ service /llm on new http:Listener(8080) {
 
         test:assertEquals(payload.model, "gpt4o");
         return {
-            'object: "chat.completion", created: 0, model: "", id: "", 
-            choices: [{
-                finish_reason: "stop", index: 0, logprobs: (),
-                message: {
-                    role: "assistant",
-                    content: review2.toJsonString()
+            'object: "chat.completion",
+            created: 0,
+            model: "",
+            id: "",
+            choices: [
+                {
+                    finish_reason: "stop",
+                    index: 0,
+                    logprobs: (),
+                    message: {
+                        role: "assistant",
+                        content: review2.toJsonString()
+                    }
                 }
-            }]
+            ]
         };
     }
 }
-
 

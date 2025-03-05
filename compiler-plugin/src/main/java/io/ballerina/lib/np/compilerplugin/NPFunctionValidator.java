@@ -207,7 +207,7 @@ public class NPFunctionValidator implements AnalysisTask<SyntaxNodeAnalysisConte
                                   DiagnosticCode diagnosticsCode) {
         DiagnosticInfo diagnosticInfo = new DiagnosticInfo(diagnosticsCode.getCode(),
                 diagnosticsCode.getMessage(), diagnosticsCode.getSeverity());
-        this.analysisData.errored = true;
+        this.analysisData.analysisTaskErrored = true;
         ctx.reportDiagnostic(DiagnosticFactory.createDiagnostic(diagnosticInfo, location));
     }
 }

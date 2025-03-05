@@ -72,12 +72,7 @@ isolated function buildPromptString(Prompt prompt, typedesc<anydata> td) returns
 
     // TODO: handle xml
     Schema? ann = td.@schemaAnnot;
-    string schema;
-    if ann is () {
-        schema = generateJsonSchemaForTypedescAsString(td);
-    } else {
-        schema = ann.schema.toString();
-    }
+    string schema = ann is () ? generateJsonSchemaForTypedescAsString(td) : ann.get("schema").toJsonString();
     return string `${str}.  
         The output should be a JSON value that satisfies the following JSON schema, 
         returned within a markdown snippet enclosed within ${"```json"} and ${"```"}

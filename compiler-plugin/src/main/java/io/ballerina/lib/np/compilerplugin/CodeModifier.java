@@ -40,7 +40,7 @@ public class CodeModifier extends io.ballerina.projects.plugins.CodeModifier {
     }
 
     static final class AnalysisData {
-        boolean errored = false;
+        boolean analysisTaskErrored = false;
         Map<String, String> typeSchemas = new HashMap<>();
     }
 }

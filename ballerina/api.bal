@@ -17,9 +17,9 @@
 import ballerina/jballerina.java;
 
 configurable DefaultModelConfig? defaultModelConfig = ();
-public type Schema record {
-    json schema;
-};
+
+public type Schema map<json>;
+public annotation Schema schemaAnnot on type;
 
 public type Prompt object {
     *object:RawTemplate;
@@ -35,7 +35,6 @@ public isolated function callLlm(Prompt prompt, Model model = getDefaultModel(),
 } external;
 
 public const annotation LlmCall on source external;
-public annotation Schema schemaAnnot on type;
 public type Model distinct isolated client object {
    isolated remote function call(Prompt prompt, typedesc<anydata> td) returns string|error;
 };

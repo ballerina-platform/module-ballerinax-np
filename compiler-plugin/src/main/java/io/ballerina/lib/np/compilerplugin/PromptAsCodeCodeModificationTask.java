@@ -100,7 +100,7 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
     public void modify(SourceModifierContext modifierContext) {
         Package currentPackage = modifierContext.currentPackage();
 
-        if (this.analysisData.errored) {
+        if (this.analysisData.analysisTaskErrored) {
             return;
         }
 

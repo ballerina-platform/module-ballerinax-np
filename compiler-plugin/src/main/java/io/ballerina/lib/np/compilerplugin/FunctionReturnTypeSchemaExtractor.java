@@ -210,5 +210,4 @@ public class FunctionReturnTypeSchemaExtractor implements AnalysisTask<SyntaxNod
         schema.setExtensions(null);
         schema.setConst(null);
     }
-
 }

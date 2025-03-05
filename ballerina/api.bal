@@ -21,6 +21,9 @@ import ballerina/jballerina.java;
 # function annotated with annotation `LlmCall`.
 configurable DefaultModelConfig? defaultModelConfig = ();
 
+public type Schema map<json>;
+public annotation Schema schemaAnnot on type;
+
 # Raw template type for prompts.
 public type Prompt object {
     *object:RawTemplate;

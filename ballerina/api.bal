@@ -16,17 +16,33 @@
 
 import ballerina/jballerina.java;
 
+# Configuration for the model to default to if not explicitly
+# specified in the call to function `callLlm` or an external
+# function annotated with annotation `LlmCall`.
 configurable DefaultModelConfig? defaultModelConfig = ();
 
-public type Schema map<json>;
-public annotation Schema schemaAnnot on type;
-
+# Raw template type for prompts.
 public type Prompt object {
     *object:RawTemplate;
+
+    # The fixed string parts of the template.
     public string[] & readonly strings;
+
+    # The interpolations in the template.
     public anydata[] insertions;
 };
 
+
+# Calls a Large Language Model (LLM) with a given prompt and model and returns 
+# the response parsed as the expected type.
+#
+# + prompt - The prompt to send to the LLM
+# + model - The LLM model to use (defaults to the default model configured via the configurable 
+#           variable `defaultModelConfig`) 
+# + td - The expected return type, which is also used as the schema for the response expected 
+#           from the LLM
+# + return - The LLM response parsed according to the specified type, or an error if the call 
+#           fails or parsing fails
 public isolated function callLlm(Prompt prompt, Model model = getDefaultModel(), 
                                  typedesc<anydata> td = <>) 
         returns td|error = @java:Method {
@@ -34,7 +50,23 @@ public isolated function callLlm(Prompt prompt, Model model = getDefaultModel(),
     'class: "io.ballerina.lib.np.Native"
 } external;
 
+# Annotation to indicate that the implementation of a function should be
+# a call to an LLM with the prompt specified as a parameter and using the 
+# return type as the schema for the expected response.
+# If function has a `model` parameter, it will be used as the model to call.
+# If not, defaults to the default model configured via the configurable 
+# variable `defaultModelConfig`
 public const annotation LlmCall on source external;
+
+# Abstraction for a Large Language Model (LLM), with chat/completion functionality.
 public type Model distinct isolated client object {
-   isolated remote function call(Prompt prompt, typedesc<anydata> td) returns string|error;
+
+
+    # Makes a call to the Language Model (LLM) with the given prompt and returns the result.
+    # 
+    # + prompt - The prompt to be sent to the LLM
+    # + td - The type descriptor for the expected return type to be used as the schema with
+    #       the prompt
+    # + return - A string containing the LLM's response or an error if the call fails
+    isolated remote function call(Prompt prompt, typedesc<anydata> td) returns string|error;
 };

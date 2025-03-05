@@ -69,13 +69,15 @@ isolated function buildPromptString(Prompt prompt, typedesc<json> td) returns st
     foreach int i in 0 ..< insertions.length() {
         str = str + insertions[i].toString() + prompt.strings[i + 1];
     }
-    
+
+    Schema? ann = td.@schemaAnnot;
+    string schema = ann is () ? generateJsonSchemaForTypedescAsString(td) : ann.get("schema").toJsonString();
     return string `${str}.  
         The output should be a JSON value that satisfies the following JSON schema, 
         returned within a markdown snippet enclosed within ${"```json"} and ${"```"}
         
         Schema:
-        ${generateJsonSchemaForTypedescAsString(td)}`;
+        ${schema}`;
 }
 
 isolated function callLlmBal(Prompt prompt, Model model, typedesc<json> td) returns json|error {

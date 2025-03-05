@@ -44,13 +44,13 @@ import static io.ballerina.lib.np.compilerplugin.Commons.findNPModule;
 import static io.ballerina.lib.np.compilerplugin.Commons.hasLlmCallAnnotation;
 import static io.ballerina.projects.util.ProjectConstants.EMPTY_STRING;
 
-public class ToolAnnotationAnalysisTask implements AnalysisTask<SyntaxNodeAnalysisContext> {
+public class FunctionReturnTypeSchemaExtractor implements AnalysisTask<SyntaxNodeAnalysisContext> {
     CodeModifier.AnalysisData analysisData;
     private static final String STRING = "string";
     private static final String BYTE = "byte";
     private static final String NUMBER = "number";
 
-    ToolAnnotationAnalysisTask(CodeModifier.AnalysisData analysisData) {
+    FunctionReturnTypeSchemaExtractor(CodeModifier.AnalysisData analysisData) {
         this.analysisData = analysisData;
     }
     @Override
@@ -67,7 +67,7 @@ public class ToolAnnotationAnalysisTask implements AnalysisTask<SyntaxNodeAnalys
         TypeMapper typeMapper = new TypeMapperImpl(ctx);
 
         for (ModuleMemberDeclarationNode memberNode : rootNode.members()) {
-            if (!isValidExternalFunction(memberNode, npModulePrefixStr)) {
+            if (!isExternalFunctionWithLlmCall(memberNode, npModulePrefixStr)) {
                 continue;
             }
 
@@ -76,7 +76,7 @@ public class ToolAnnotationAnalysisTask implements AnalysisTask<SyntaxNodeAnalys
         }
     }
 
-    private boolean isValidExternalFunction(ModuleMemberDeclarationNode memberNode, String npModulePrefixStr) {
+    private boolean isExternalFunctionWithLlmCall(ModuleMemberDeclarationNode memberNode, String npModulePrefixStr) {
         if (!(memberNode instanceof FunctionDefinitionNode functionDefinition)) {
             return false;
         }
@@ -130,25 +130,25 @@ public class ToolAnnotationAnalysisTask implements AnalysisTask<SyntaxNodeAnalys
 
         Map<String, Schema> properties = schema.getProperties();
         if (properties != null) {
-            properties.values().forEach(ToolAnnotationAnalysisTask::modifySchema);
+            properties.values().forEach(FunctionReturnTypeSchemaExtractor::modifySchema);
         }
 
         List<Schema> allOf = schema.getAllOf();
         if (allOf != null) {
             schema.setType(null);
-            allOf.forEach(ToolAnnotationAnalysisTask::modifySchema);
+            allOf.forEach(FunctionReturnTypeSchemaExtractor::modifySchema);
         }
 
         List<Schema> anyOf = schema.getAnyOf();
         if (anyOf != null) {
             schema.setType(null);
-            anyOf.forEach(ToolAnnotationAnalysisTask::modifySchema);
+            anyOf.forEach(FunctionReturnTypeSchemaExtractor::modifySchema);
         }
 
         List<Schema> oneOf = schema.getOneOf();
         if (oneOf != null) {
             schema.setType(null);
-            oneOf.forEach(ToolAnnotationAnalysisTask::modifySchema);
+            oneOf.forEach(FunctionReturnTypeSchemaExtractor::modifySchema);
         }
 
         // Override default ballerina byte to json schema mapping

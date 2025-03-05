@@ -44,7 +44,7 @@ public type Prompt object {
 # + return - The LLM response parsed according to the specified type, or an error if the call 
 #           fails or parsing fails
 public isolated function callLlm(Prompt prompt, Model model = getDefaultModel(), 
-                                 typedesc<anydata> td = <>) 
+                                 typedesc<json> td = <>) 
         returns td|error = @java:Method {
     name: "callLlmCallBallerinaFunction",
     'class: "io.ballerina.lib.np.Native"
@@ -68,5 +68,5 @@ public type Model distinct isolated client object {
     # + td - The type descriptor for the expected return type to be used as the schema with
     #       the prompt
     # + return - A string containing the LLM's response or an error if the call fails
-    isolated remote function call(Prompt prompt, typedesc<anydata> td) returns string|error;
+    isolated remote function call(Prompt prompt, typedesc<json> td) returns string|error;
 };

@@ -43,7 +43,7 @@ public isolated distinct client class AzureOpenAIModel {
    }
 
 
-    isolated remote function call(Prompt prompt, typedesc<anydata> td) returns string|error {
+    isolated remote function call(Prompt prompt, typedesc<json> td) returns string|error {
         chat:CreateChatCompletionRequest chatBody = {
             messages: [{role: "user", "content": buildPromptString(prompt, td)}]
         };

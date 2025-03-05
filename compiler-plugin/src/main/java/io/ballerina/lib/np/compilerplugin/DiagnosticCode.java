@@ -38,7 +38,11 @@ public enum DiagnosticCode {
     TYPE_OF_MODEL_PARAM_MUST_BE_A_SUBTYPE_OF_NP_MODEL("NP_ERROR_005",
             "the type of the ''model'' parameter must be a subtype of ''ballerinax/np:Model''", ERROR),
     RETURN_TYPE_MUST_CONTAIN_ERROR("NP_ERROR_006",
-            "the return type of an ''LlmCall'' function must contain ''error''", ERROR);
+            "the return type of an ''LlmCall'' function must contain ''error''", ERROR),
+    RETURN_TYPE_MUST_CONTAIN_A_UNION_OF_NON_ERROR_AND_ERROR("NP_ERROR_007",
+            "the return type of an ''LlmCall'' function must contain both a non-''error'' type and ''error''", ERROR),
+    NON_ERROR_RETURN_TYPE_MUST_BE_A_SUBTYPE_OF_JSON("NP_ERROR_008",
+            "non-''error'' return type of an ''LlmCall'' function must be a subtype of ''json''", ERROR);
 
     private final String code;
     private final String message;

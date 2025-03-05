@@ -41,7 +41,7 @@ public isolated distinct client class OpenAIModel {
         self.model = model;
     }
 
-    isolated remote function call(Prompt prompt, typedesc<anydata> td) returns string|error {
+    isolated remote function call(Prompt prompt, typedesc<json> td) returns string|error {
         openAIChat:CreateChatCompletionRequest chatBody = {
             messages: [{role: "user", "content": buildPromptString(prompt, td)}],
             model: self.model

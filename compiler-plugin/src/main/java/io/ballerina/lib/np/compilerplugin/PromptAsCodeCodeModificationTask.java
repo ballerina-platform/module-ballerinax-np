@@ -36,7 +36,6 @@ import io.ballerina.compiler.syntax.tree.ImportDeclarationNode;
 import io.ballerina.compiler.syntax.tree.ImportOrgNameNode;
 import io.ballerina.compiler.syntax.tree.ImportPrefixNode;
 import io.ballerina.compiler.syntax.tree.MappingConstructorExpressionNode;
-import io.ballerina.compiler.syntax.tree.MappingFieldNode;
 import io.ballerina.compiler.syntax.tree.MetadataNode;
 import io.ballerina.compiler.syntax.tree.ModuleMemberDeclarationNode;
 import io.ballerina.compiler.syntax.tree.ModulePartNode;
@@ -341,23 +340,7 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
     }
 
     public static MappingConstructorExpressionNode getAnnotationExpression(String jsonSchema) {
-        SeparatedNodeList<MappingFieldNode> separatedNodeList =
-                                            NodeFactory.createSeparatedNodeList(createSchemaField(jsonSchema));
-
-        return NodeFactory.createMappingConstructorExpressionNode(
-                NodeFactory.createToken(SyntaxKind.OPEN_BRACE_TOKEN),
-                separatedNodeList,
-                NodeFactory.createToken(SyntaxKind.CLOSE_BRACE_TOKEN)
-        );
-    }
-
-    public static SpecificFieldNode createSchemaField(String jsonSchema) {
-        return NodeFactory.createSpecificFieldNode(
-                null,
-                AbstractNodeFactory.createIdentifierToken(Constants.SCHEMA),
-                AbstractNodeFactory.createToken(SyntaxKind.COLON_TOKEN),
-                NodeParser.parseExpression(jsonSchema)
-        );
+        return (MappingConstructorExpressionNode) NodeParser.parseExpression(jsonSchema);
     }
 
     private boolean isExternalFunctionWithLlmCall(ModuleMemberDeclarationNode memberNode, String npModulePrefixStr) {

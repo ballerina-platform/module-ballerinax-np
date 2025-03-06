@@ -27,6 +27,9 @@ type DefaultOpenAIModelConfig record {|
     string model;
 |};
 
+public type Schema map<json>;
+public annotation Schema schemaAnnot on type;
+
 final Model? defaultModel;
 
 function init() returns error? {
@@ -71,7 +74,7 @@ isolated function buildPromptString(Prompt prompt, typedesc<json> td) returns st
     }
 
     Schema? ann = td.@schemaAnnot;
-    string schema = ann is () ? generateJsonSchemaForTypedescAsString(td) : ann.get("schema").toJsonString();
+    string schema = ann is () ? generateJsonSchemaForTypedescAsString(td) : ann.toJsonString();
     return string `${str}.  
         The output should be a JSON value that satisfies the following JSON schema, 
         returned within a markdown snippet enclosed within ${"```json"} and ${"```"}

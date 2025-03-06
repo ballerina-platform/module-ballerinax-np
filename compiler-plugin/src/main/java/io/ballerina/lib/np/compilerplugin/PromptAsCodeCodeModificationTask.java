@@ -329,7 +329,8 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
     }
 
     public static AnnotationNode getSchemaAnnotation(String jsonSchema) {
-        String configIdentifierString = Constants.NP + Constants.COLON + Constants.SCHEMA_ANNOTATION_IDENTIFIER;
+        String configIdentifierString =
+                                npPrefixIfImported.get() + Constants.COLON + Constants.SCHEMA_ANNOTATION_IDENTIFIER;
         IdentifierToken identifierToken = NodeFactory.createIdentifierToken(configIdentifierString);
 
         return NodeFactory.createAnnotationNode(

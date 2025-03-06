@@ -14,4 +14,7 @@ public final class Constants {
     static final String MODEL_TYPE = "Model";
     static final String CALL_LLM = "callLlm";
     static final String COLON = ":";
+    static final String STRING = "string";
+    static final String BYTE = "byte";
+    static final String NUMBER = "number";
 }

@@ -19,10 +19,8 @@
 package io.ballerina.lib.np.compilerplugin;
 
 import io.ballerina.compiler.syntax.tree.SyntaxKind;
+import io.ballerina.openapi.service.mapper.type.TypeMapper;
 import io.ballerina.projects.plugins.CodeModifierContext;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Natural programming code modifier.
@@ -35,13 +33,13 @@ public class CodeModifier extends io.ballerina.projects.plugins.CodeModifier {
     public void init(CodeModifierContext modifierContext) {
         AnalysisData analysisData = new AnalysisData();
         modifierContext.addSyntaxNodeAnalysisTask(new NPFunctionValidator(analysisData), SyntaxKind.MODULE_PART);
-        modifierContext.addSyntaxNodeAnalysisTask(new FunctionReturnTypeSchemaExtractor(analysisData),
-                                                  SyntaxKind.MODULE_PART);
+        modifierContext.addSyntaxNodeAnalysisTask(new TypeMapperImplInitializer(analysisData), SyntaxKind.MODULE_PART);
         modifierContext.addSourceModifierTask(new PromptAsCodeCodeModificationTask(analysisData));
     }
 
     static final class AnalysisData {
         boolean analysisTaskErrored = false;
-        Map<String, String> typeSchemas = new HashMap<>();
+
+        TypeMapper typeMapper;
     }
 }

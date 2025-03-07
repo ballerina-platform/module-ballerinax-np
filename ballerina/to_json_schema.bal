@@ -150,5 +150,5 @@ isolated function getStringRepresentation(typedesc<json> fieldType) returns stri
         return "boolean";
     }
 
-    panic error("unimplemented");
+    panic error("JSON schema generation is not yet supported for type: " + fieldType.toString());
 }

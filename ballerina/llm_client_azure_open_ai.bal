@@ -58,12 +58,12 @@ public isolated distinct client class AzureOpenAIModel {
         }[]? choices = chatResult.choices;
 
         if choices is () {
-            return error("No completion found");
+            return error("No completion choices");
         }
 
         string? resp = choices[0].message?.content;
         if resp is () {
-            return error("No completion found");
+            return error("No completion message");
         }
         return resp;
     }

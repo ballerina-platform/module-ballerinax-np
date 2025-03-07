@@ -53,7 +53,7 @@ public isolated distinct client class OpenAIModel {
 
         string? resp = choices[0].message?.content;
         if resp is () {
-            return error("No completion found");
+            return error("No completion message");
         }
         return resp;
     }

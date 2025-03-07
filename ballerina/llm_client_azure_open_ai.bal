@@ -28,20 +28,19 @@ public type AzureOpenAIModelConfig record {|
 public isolated distinct client class AzureOpenAIModel {
     *Model;
 
-   private final chat:Client cl;
-   private final string deploymentId;
-   private final string apiVersion;
+    private final chat:Client cl;
+    private final string deploymentId;
+    private final string apiVersion;
 
-   public isolated function init(chat:Client|AzureOpenAIModelConfig azureOpenAI,
-                        string deploymentId,
-                        string apiVersion) returns error? {
-       self.cl = azureOpenAI is chat:Client ? 
-                    azureOpenAI :
-                    check new (azureOpenAI.connectionConfig, azureOpenAI.serviceUrl);
-       self.deploymentId = deploymentId;
-       self.apiVersion = apiVersion;
-   }
-
+    public isolated function init(chat:Client|AzureOpenAIModelConfig azureOpenAI,
+            string deploymentId,
+            string apiVersion) returns error? {
+        self.cl = azureOpenAI is chat:Client ?
+            azureOpenAI :
+            check new (azureOpenAI.connectionConfig, azureOpenAI.serviceUrl);
+        self.deploymentId = deploymentId;
+        self.apiVersion = apiVersion;
+    }
 
     isolated remote function call(Prompt prompt, typedesc<json> td) returns string|error {
         chat:CreateChatCompletionRequest chatBody = {

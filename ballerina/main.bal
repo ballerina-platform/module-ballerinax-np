@@ -49,13 +49,13 @@ function init() returns error? {
 
     string? serviceUrl = defaultModelConfigVar?.serviceUrl;
     defaultModel = serviceUrl is () ?
-                    check new OpenAIModel({
-                            connectionConfig: defaultModelConfigVar.connectionConfig
-                        }, defaultModelConfigVar.model) :
-                    check new OpenAIModel({
-                            connectionConfig: defaultModelConfigVar.connectionConfig,
-                            serviceUrl
-                        }, defaultModelConfigVar.model);
+        check new OpenAIModel({
+            connectionConfig: defaultModelConfigVar.connectionConfig
+        }, defaultModelConfigVar.model) :
+        check new OpenAIModel({
+            connectionConfig: defaultModelConfigVar.connectionConfig,
+            serviceUrl
+        }, defaultModelConfigVar.model);
 }
 
 isolated function getDefaultModel() returns Model {

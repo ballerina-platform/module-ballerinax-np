@@ -32,19 +32,18 @@ public type Prompt object {
     public anydata[] insertions;
 };
 
-
 # Calls a Large Language Model (LLM) with a given prompt and model and returns 
 # the response parsed as the expected type.
 #
 # + prompt - The prompt to send to the LLM
 # + model - The LLM model to use (defaults to the default model configured via the configurable 
-#           variable `defaultModelConfig`) 
+# variable `defaultModelConfig`) 
 # + td - The expected return type, which is also used as the schema for the response expected 
-#           from the LLM
+# from the LLM
 # + return - The LLM response parsed according to the specified type, or an error if the call 
-#           fails or parsing fails
-public isolated function callLlm(Prompt prompt, Model model = getDefaultModel(), 
-                                 typedesc<json> td = <>) 
+# fails or parsing fails
+public isolated function callLlm(Prompt prompt, Model model = getDefaultModel(),
+        typedesc<json> td = <>)
         returns td|error = @java:Method {
     name: "callLlmCallBallerinaFunction",
     'class: "io.ballerina.lib.np.Native"
@@ -61,12 +60,11 @@ public const annotation LlmCall on source external;
 # Abstraction for a Large Language Model (LLM), with chat/completion functionality.
 public type Model distinct isolated client object {
 
-
     # Makes a call to the Language Model (LLM) with the given prompt and returns the result.
-    # 
+    #
     # + prompt - The prompt to be sent to the LLM
     # + td - The type descriptor for the expected return type to be used as the schema with
-    #       the prompt
+    # the prompt
     # + return - A string containing the LLM's response or an error if the call fails
     isolated remote function call(Prompt prompt, typedesc<json> td) returns string|error;
 };

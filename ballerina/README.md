@@ -1,6 +1,6 @@
 # Overview
 
-The natural programming library module provides seamless integration with Large Language Models (LLMs). It offers a  first-class approach to integrate LLM calls with automatic detection of expected response formats and parsing of responses to corresponding Ballerina types.
+The natural programming library module provides seamless integration with Large Language Models (LLMs). It offers a first-class approach to integrate LLM calls with automatic detection of expected response formats and parsing of responses to corresponding Ballerina types.
 
 This simplifies working with AI models by handling the communication and data conversion automatically.
 
@@ -58,7 +58,7 @@ The model to use can be set either by configuration or by introducing a `model` 
 
 1. Configuration
 
-    Values need to be provided for the `defaultModelConfig` configurable value. E.g., add the relevant configuration in the Config.toml file
+    Values need to be provided for the `defaultModelConfig` configurable value. E.g., add the relevant configuration in the Config.toml file as follows for Azure OpenAI:
 
     ```toml
     [ballerinax.np.defaultModelConfig]

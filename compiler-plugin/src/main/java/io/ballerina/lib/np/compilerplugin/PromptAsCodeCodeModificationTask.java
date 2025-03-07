@@ -19,6 +19,9 @@
 package io.ballerina.lib.np.compilerplugin;
 
 import io.ballerina.compiler.api.SemanticModel;
+import io.ballerina.compiler.api.symbols.ArrayTypeSymbol;
+import io.ballerina.compiler.api.symbols.RecordTypeSymbol;
+import io.ballerina.compiler.api.symbols.TupleTypeSymbol;
 import io.ballerina.compiler.api.symbols.TypeReferenceTypeSymbol;
 import io.ballerina.compiler.api.symbols.TypeSymbol;
 import io.ballerina.compiler.api.symbols.UnionTypeSymbol;
@@ -95,11 +98,11 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
     private static final Token COLON = createToken(SyntaxKind.COLON_TOKEN);
     private static final Token RIGHT_DOUBLE_ARROW = createToken(SyntaxKind.RIGHT_DOUBLE_ARROW_TOKEN);
     private static final Token COMMA = createToken(SyntaxKind.COMMA_TOKEN);
-    public static final String SCHEMA_ANNOTATION_IDENTIFIER = "schemaAnnot";
-    static final String CALL_LLM = "callLlm";
-    static final String STRING = "string";
-    static final String BYTE = "byte";
-    static final String NUMBER = "number";
+    private static final String SCHEMA_ANNOTATION_IDENTIFIER = "schemaAnnot";
+    private static final String CALL_LLM = "callLlm";
+    private static final String STRING = "string";
+    private static final String BYTE = "byte";
+    private static final String NUMBER = "number";
 
     private static Optional<String> npPrefixIfImported = Optional.empty();
     private static final SimpleNameReferenceNode PROMPT_NAME_REF_NODE =
@@ -365,13 +368,31 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
         TypeSymbol typeSymbol = typeSymbolOpt.get();
         if (typeSymbol instanceof UnionTypeSymbol unionTypeSymbol) {
             for (TypeSymbol memberType : unionTypeSymbol.memberTypeDescriptors()) {
-                if (memberType instanceof TypeReferenceTypeSymbol typeReferenceTypeSymbol) {
-                    Schema schema = typeMapper.getSchema(typeReferenceTypeSymbol);
-                    typeSchemas.put(typeReferenceTypeSymbol.definition().getName().get(), getJsonSchema(schema));
-                }
+                getTypeSchema(memberType, typeMapper, typeSchemas);
             }
         }
     }
+
+    private void getTypeSchema(TypeSymbol memberType, TypeMapper typeMapper, Map<String, String> typeSchemas) {
+        switch (memberType) {
+            case TypeReferenceTypeSymbol typeReference ->
+                    typeSchemas.put(typeReference.definition().getName().get(),
+                            getJsonSchema(typeMapper.getSchema(typeReference)));
+
+            case ArrayTypeSymbol arrayType ->
+                    getTypeSchema(arrayType.memberTypeDescriptor(), typeMapper, typeSchemas);
+
+            case TupleTypeSymbol tupleType ->
+                    tupleType.members().forEach(member ->
+                            getTypeSchema(member.typeDescriptor(), typeMapper, typeSchemas));
+
+            case RecordTypeSymbol recordType ->
+                    recordType.fieldDescriptors().values().forEach(field ->
+                            getTypeSchema(field.typeDescriptor(), typeMapper, typeSchemas));
+            default -> { }
+        }
+    }
+
 
     @SuppressWarnings("rawtypes")
     private static String getJsonSchema(Schema schema) {

@@ -59,8 +59,8 @@ import static io.ballerina.lib.np.compilerplugin.Commons.hasLlmCallAnnotation;
  * @since 0.3.0
  */
 public class NPFunctionValidator implements AnalysisTask<SyntaxNodeAnalysisContext> {
-    static final String PROMPT_TYPE = "Prompt";
-    static final String MODEL_TYPE = "Model";
+    private static final String PROMPT_TYPE = "Prompt";
+    private static final String MODEL_TYPE = "Model";
 
     private final CodeModifier.AnalysisData analysisData;
 

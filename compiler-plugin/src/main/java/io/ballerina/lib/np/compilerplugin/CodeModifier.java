@@ -39,7 +39,6 @@ public class CodeModifier extends io.ballerina.projects.plugins.CodeModifier {
 
     static final class AnalysisData {
         boolean analysisTaskErrored = false;
-
         TypeMapper typeMapper;
     }
 }

@@ -27,16 +27,18 @@ import io.ballerina.compiler.syntax.tree.ModulePartNode;
 
 import java.util.Optional;
 
-import static io.ballerina.lib.np.compilerplugin.Constants.LLM_CALL_ANNOT;
-import static io.ballerina.lib.np.compilerplugin.Constants.MODULE_NAME;
-import static io.ballerina.lib.np.compilerplugin.Constants.ORG_NAME;
-
 /**
  * Class containing common constants and functionality.
  *
  * @since 0.3.0
  */
 class Commons {
+    static final String ORG_NAME = "ballerinax";
+    static final String MODULE_NAME = "np";
+    static final String PROMPT_VAR = "prompt";
+    static final String MODEL_VAR = "model";
+    static final String LLM_CALL_ANNOT = "LlmCall";
+
     static boolean hasLlmCallAnnotation(ExternalFunctionBodyNode functionBody, String modulePrefix) {
         return hasAnnotation(functionBody, modulePrefix, LLM_CALL_ANNOT);
     }

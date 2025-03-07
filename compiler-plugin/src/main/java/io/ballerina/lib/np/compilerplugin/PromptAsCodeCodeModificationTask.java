@@ -22,7 +22,6 @@ import io.ballerina.compiler.api.SemanticModel;
 import io.ballerina.compiler.api.symbols.TypeReferenceTypeSymbol;
 import io.ballerina.compiler.api.symbols.TypeSymbol;
 import io.ballerina.compiler.api.symbols.UnionTypeSymbol;
-import io.ballerina.compiler.syntax.tree.AbstractNodeFactory;
 import io.ballerina.compiler.syntax.tree.AnnotationNode;
 import io.ballerina.compiler.syntax.tree.DefaultableParameterNode;
 import io.ballerina.compiler.syntax.tree.ExpressionFunctionBodyNode;
@@ -48,7 +47,6 @@ import io.ballerina.compiler.syntax.tree.RequiredParameterNode;
 import io.ballerina.compiler.syntax.tree.ReturnTypeDescriptorNode;
 import io.ballerina.compiler.syntax.tree.SeparatedNodeList;
 import io.ballerina.compiler.syntax.tree.SimpleNameReferenceNode;
-import io.ballerina.compiler.syntax.tree.SpecificFieldNode;
 import io.ballerina.compiler.syntax.tree.SyntaxKind;
 import io.ballerina.compiler.syntax.tree.SyntaxTree;
 import io.ballerina.compiler.syntax.tree.Token;
@@ -77,15 +75,11 @@ import static io.ballerina.compiler.syntax.tree.SyntaxKind.CLOSE_PAREN_TOKEN;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.DEFAULTABLE_PARAM;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.OPEN_PAREN_TOKEN;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.REQUIRED_PARAM;
-import static io.ballerina.lib.np.compilerplugin.Constants.BYTE;
-import static io.ballerina.lib.np.compilerplugin.Constants.CALL_LLM;
-import static io.ballerina.lib.np.compilerplugin.Constants.MODEL_VAR;
-import static io.ballerina.lib.np.compilerplugin.Constants.MODULE_NAME;
-import static io.ballerina.lib.np.compilerplugin.Constants.NUMBER;
-import static io.ballerina.lib.np.compilerplugin.Constants.ORG_NAME;
-import static io.ballerina.lib.np.compilerplugin.Constants.PROMPT_VAR;
+import static io.ballerina.lib.np.compilerplugin.Commons.MODEL_VAR;
+import static io.ballerina.lib.np.compilerplugin.Commons.MODULE_NAME;
+import static io.ballerina.lib.np.compilerplugin.Commons.ORG_NAME;
+import static io.ballerina.lib.np.compilerplugin.Commons.PROMPT_VAR;
 import static io.ballerina.lib.np.compilerplugin.Commons.hasLlmCallAnnotation;
-import static io.ballerina.lib.np.compilerplugin.Constants.STRING;
 import static io.ballerina.projects.util.ProjectConstants.EMPTY_STRING;
 
 /**
@@ -101,6 +95,11 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
     private static final Token COLON = createToken(SyntaxKind.COLON_TOKEN);
     private static final Token RIGHT_DOUBLE_ARROW = createToken(SyntaxKind.RIGHT_DOUBLE_ARROW_TOKEN);
     private static final Token COMMA = createToken(SyntaxKind.COMMA_TOKEN);
+    public static final String SCHEMA_ANNOTATION_IDENTIFIER = "schemaAnnot";
+    static final String CALL_LLM = "callLlm";
+    static final String STRING = "string";
+    static final String BYTE = "byte";
+    static final String NUMBER = "number";
 
     private static Optional<String> npPrefixIfImported = Optional.empty();
     private static final SimpleNameReferenceNode PROMPT_NAME_REF_NODE =
@@ -237,12 +236,12 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
             for (ParameterNode parameter : functionDefinition.functionSignature().parameters()) {
                 SyntaxKind kind = parameter.kind();
                 if (kind == REQUIRED_PARAM &&
-                        Constants.MODEL_VAR.equals(((RequiredParameterNode) parameter).paramName().get().text())) {
+                        MODEL_VAR.equals(((RequiredParameterNode) parameter).paramName().get().text())) {
                     return true;
                 }
 
                 if (kind == DEFAULTABLE_PARAM &&
-                        Constants.MODEL_VAR.equals(((DefaultableParameterNode) parameter).paramName().get().text())) {
+                        MODEL_VAR.equals(((DefaultableParameterNode) parameter).paramName().get().text())) {
                     return true;
                 }
             }
@@ -328,8 +327,7 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
     }
 
     public static AnnotationNode getSchemaAnnotation(String jsonSchema) {
-        String configIdentifierString =
-                                npPrefixIfImported.get() + Constants.COLON + Constants.SCHEMA_ANNOTATION_IDENTIFIER;
+        String configIdentifierString = npPrefixIfImported.get() + COLON.text() + SCHEMA_ANNOTATION_IDENTIFIER;
         IdentifierToken identifierToken = NodeFactory.createIdentifierToken(configIdentifierString);
 
         return NodeFactory.createAnnotationNode(

@@ -47,11 +47,9 @@ import io.ballerina.tools.diagnostics.Location;
 
 import java.util.Optional;
 
-import static io.ballerina.lib.np.compilerplugin.Constants.MODEL_TYPE;
-import static io.ballerina.lib.np.compilerplugin.Constants.MODEL_VAR;
-import static io.ballerina.lib.np.compilerplugin.Constants.MODULE_NAME;
-import static io.ballerina.lib.np.compilerplugin.Constants.PROMPT_TYPE;
-import static io.ballerina.lib.np.compilerplugin.Constants.PROMPT_VAR;
+import static io.ballerina.lib.np.compilerplugin.Commons.MODEL_VAR;
+import static io.ballerina.lib.np.compilerplugin.Commons.MODULE_NAME;
+import static io.ballerina.lib.np.compilerplugin.Commons.PROMPT_VAR;
 import static io.ballerina.lib.np.compilerplugin.Commons.findNPModule;
 import static io.ballerina.lib.np.compilerplugin.Commons.hasLlmCallAnnotation;
 
@@ -61,6 +59,8 @@ import static io.ballerina.lib.np.compilerplugin.Commons.hasLlmCallAnnotation;
  * @since 0.3.0
  */
 public class NPFunctionValidator implements AnalysisTask<SyntaxNodeAnalysisContext> {
+    static final String PROMPT_TYPE = "Prompt";
+    static final String MODEL_TYPE = "Model";
 
     private final CodeModifier.AnalysisData analysisData;
 

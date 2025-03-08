@@ -1,0 +1,6 @@
+[plugin]
+id = "np-compiler-plugin"
+class = "io.ballerina.lib.np.compilerplugin.CompilerPlugin"
+
+[[dependency]]
+path = "../compiler-plugin/build/libs/np-compiler-plugin-0.1.0-SNAPSHOT.jar"

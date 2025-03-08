@@ -104,16 +104,17 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
     private static final String BYTE = "byte";
     private static final String NUMBER = "number";
 
-    private static Optional<String> npPrefixIfImported = Optional.empty();
     private static final SimpleNameReferenceNode PROMPT_NAME_REF_NODE =
             NodeFactory.createSimpleNameReferenceNode(NodeFactory.createIdentifierToken(PROMPT_VAR));
     private static final SimpleNameReferenceNode MODEL_NAME_REF_NODE =
             NodeFactory.createSimpleNameReferenceNode(NodeFactory.createIdentifierToken(MODEL_VAR));
 
-    private final CodeModifier.AnalysisData analysisData;
+    private final AnalysisData analysisData;
 
     PromptAsCodeCodeModificationTask(CodeModifier.AnalysisData analysisData) {
-        this.analysisData = analysisData;
+        this.analysisData = new AnalysisData();
+        this.analysisData.analysisTaskErrored = analysisData.analysisTaskErrored;
+        this.analysisData.typeMapper = analysisData.typeMapper;
     }
 
     @Override
@@ -124,58 +125,59 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
             return;
         }
 
-        Map<String, String> typeSchemas = new HashMap<>();
         for (ModuleId moduleId : currentPackage.moduleIds()) {
             Module module = currentPackage.module(moduleId);
 
             for (DocumentId documentId: module.documentIds()) {
                 Document document = module.document(documentId);
-                processImportDeclarations(document);
-                processExternalFunctions(document, module, modifierContext, typeSchemas);
+                processImportDeclarations(document, analysisData);
+                processExternalFunctions(document, module, analysisData, modifierContext);
             }
 
             for (DocumentId documentId: module.documentIds()) {
                 Document document = module.document(documentId);
                 modifierContext.modifySourceFile(
-                        modifyDocument(document, typeSchemas), documentId);
+                        modifyDocument(document, analysisData), documentId);
             }
 
             for (DocumentId documentId: module.testDocumentIds()) {
                 Document document = module.document(documentId);
                 modifierContext.modifyTestSourceFile(
-                        modifyDocument(document, typeSchemas), documentId);
+                        modifyDocument(document, analysisData), documentId);
             }
         }
     }
 
-    private void processExternalFunctions(Document document, Module module,
-                                          SourceModifierContext modifierContext, Map<String, String> typeSchemas) {
-        if (npPrefixIfImported.isEmpty()) {
+    private void processExternalFunctions(Document document, Module module, AnalysisData analysisData,
+                                          SourceModifierContext modifierContext) {
+        if (analysisData.npPrefixIfImported.isEmpty()) {
             return;
         }
         SyntaxTree syntaxTree = document.syntaxTree();
         ModulePartNode rootNode = syntaxTree.rootNode();
         SemanticModel semanticModel = modifierContext.compilation().getSemanticModel(module.moduleId());
         for (ModuleMemberDeclarationNode memberNode : rootNode.members()) {
-            if (!isExternalFunctionWithLlmCall(memberNode, npPrefixIfImported.get())) {
+            if (!isExternalFunctionWithLlmCall(memberNode, analysisData.npPrefixIfImported.get())) {
                 continue;
             }
 
             FunctionDefinitionNode functionDefinition = (FunctionDefinitionNode) memberNode;
-            extractAndStoreSchemas(semanticModel, functionDefinition, typeSchemas, this.analysisData.typeMapper);
+            extractAndStoreSchemas(semanticModel, functionDefinition, analysisData.typeSchemas,
+                                   this.analysisData.typeMapper);
         }
     }
 
-    private static void processImportDeclarations(Document document) {
+    private static void processImportDeclarations(Document document, AnalysisData analysisData) {
         ModulePartNode modulePartNode = document.syntaxTree().rootNode();
-        ImportDeclarationModifier importDeclarationModifier = new ImportDeclarationModifier();
+        ImportDeclarationModifier importDeclarationModifier = new ImportDeclarationModifier(analysisData);
         modulePartNode.apply(importDeclarationModifier);
     }
 
-    private static TextDocument modifyDocument(Document document, Map<String, String> typeSchemas) {
+    private static TextDocument modifyDocument(Document document, AnalysisData analysisData) {
         ModulePartNode modulePartNode = document.syntaxTree().rootNode();
-        FunctionModifier functionModifier = new FunctionModifier();
-        TypeDefinitionModifier typeDefinitionModifier = new TypeDefinitionModifier(typeSchemas);
+        FunctionModifier functionModifier = new FunctionModifier(analysisData);
+        TypeDefinitionModifier typeDefinitionModifier = new TypeDefinitionModifier(analysisData.typeSchemas,
+                                                                                   analysisData);
 
         ModulePartNode modifiedRoot = (ModulePartNode) modulePartNode.apply(functionModifier);
         modifiedRoot = modifiedRoot.modify(modifiedRoot.imports(), modifiedRoot.members(), modifiedRoot.eofToken());
@@ -187,6 +189,12 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
     }
 
     private static class ImportDeclarationModifier extends TreeModifier {
+
+        private AnalysisData analysisData;
+
+        ImportDeclarationModifier(AnalysisData analysisData) {
+            this.analysisData = analysisData;
+        }
 
         @Override
         public ImportDeclarationNode transform(ImportDeclarationNode importDeclarationNode) {
@@ -202,20 +210,27 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
             }
 
             Optional<ImportPrefixNode> prefix = importDeclarationNode.prefix();
-            npPrefixIfImported = Optional.of(prefix.isEmpty() ? MODULE_NAME : prefix.get().prefix().text());
+            analysisData.npPrefixIfImported =
+                                           Optional.of(prefix.isEmpty() ? MODULE_NAME : prefix.get().prefix().text());
             return importDeclarationNode;
         }
     }
 
     private static class FunctionModifier extends TreeModifier {
 
+        private AnalysisData analysisData;
+
+        FunctionModifier(AnalysisData analysisData) {
+            this.analysisData = analysisData;
+        }
+
         @Override
         public FunctionDefinitionNode transform(FunctionDefinitionNode functionDefinition) {
-            if (npPrefixIfImported.isEmpty()) {
+            if (analysisData.npPrefixIfImported.isEmpty()) {
                 return functionDefinition;
             }
 
-            String npPrefix = npPrefixIfImported.get();
+            String npPrefix = analysisData.npPrefixIfImported.get();
 
             FunctionBodyNode functionBodyNode = functionDefinition.functionBody();
 
@@ -283,14 +298,16 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
     private static class TypeDefinitionModifier extends TreeModifier {
 
         private final Map<String, String> typeSchemas;
+        private AnalysisData analysisData;
 
-        TypeDefinitionModifier(Map<String, String> typeSchemas) {
+        TypeDefinitionModifier(Map<String, String> typeSchemas, AnalysisData analysisData) {
             this.typeSchemas = typeSchemas;
+            this.analysisData = analysisData;
         }
 
         @Override
         public TypeDefinitionNode transform(TypeDefinitionNode typeDefinitionNode) {
-            if (npPrefixIfImported.isEmpty()) {
+            if (analysisData.npPrefixIfImported.isEmpty()) {
                 return typeDefinitionNode;
             }
             String typeName = typeDefinitionNode.typeName().text();
@@ -300,13 +317,16 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
             }
 
             MetadataNode updatedMetadataNode =
-                                        updateMetadata(typeDefinitionNode, typeSchemas.get(typeName));
+                                updateMetadata(typeDefinitionNode, typeSchemas.get(typeName),
+                                               analysisData.npPrefixIfImported);
             return typeDefinitionNode.modify().withMetadata(updatedMetadataNode).apply();
         }
 
-        private MetadataNode updateMetadata(TypeDefinitionNode typeDefinitionNode, String schema) {
+        private MetadataNode updateMetadata(TypeDefinitionNode typeDefinitionNode, String schema,
+                                            Optional<String> npPrefixIfImported) {
             MetadataNode metadataNode = getMetadataNode(typeDefinitionNode);
-            NodeList<AnnotationNode> updatedAnnotations = updateAnnotations(metadataNode.annotations(), schema);
+            NodeList<AnnotationNode> updatedAnnotations =
+                                            updateAnnotations(metadataNode.annotations(), schema, npPrefixIfImported);
             return metadataNode.modify().withAnnotations(updatedAnnotations).apply();
         }
     }
@@ -319,17 +339,17 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
     }
 
     private static NodeList<AnnotationNode> updateAnnotations(NodeList<AnnotationNode> currentAnnotations,
-                                                              String jsonSchema) {
+                                                              String jsonSchema, Optional<String> npPrefixIfImported) {
         NodeList<AnnotationNode> updatedAnnotations = NodeFactory.createNodeList();
 
         if (currentAnnotations.isEmpty()) {
-            updatedAnnotations = updatedAnnotations.add(getSchemaAnnotation(jsonSchema));
+            updatedAnnotations = updatedAnnotations.add(getSchemaAnnotation(jsonSchema, npPrefixIfImported));
         }
 
         return updatedAnnotations;
     }
 
-    public static AnnotationNode getSchemaAnnotation(String jsonSchema) {
+    public static AnnotationNode getSchemaAnnotation(String jsonSchema, Optional<String> npPrefixIfImported) {
         String configIdentifierString = npPrefixIfImported.get() + COLON.text() + SCHEMA_ANNOTATION_IDENTIFIER;
         IdentifierToken identifierToken = NodeFactory.createIdentifierToken(configIdentifierString);
 
@@ -495,5 +515,12 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
         schema.setExamples(null);
         schema.setExtensions(null);
         schema.setConst(null);
+    }
+
+    static final class AnalysisData {
+        Optional<String> npPrefixIfImported = Optional.empty();
+        Map<String, String> typeSchemas = new HashMap<>();
+        boolean analysisTaskErrored;
+        TypeMapper typeMapper;
     }
 }

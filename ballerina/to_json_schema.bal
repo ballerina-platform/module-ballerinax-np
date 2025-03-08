@@ -102,7 +102,8 @@ isolated function generateJsonSchema(string[] names, boolean[] required,
 
     foreach int i in 0 ..< names.length() {
         string fieldName = names[i];
-        JsonSchema|JsonArraySchema|map<json> fieldSchema = getJsonSchemaType(types[i], nilable[i]);
+        map<json>? ann = types[i].@Schema;
+        JsonSchema|JsonArraySchema|map<json> fieldSchema = ann is () ? getJsonSchemaType(types[i], nilable[i]) : ann;
         properties[fieldName] = fieldSchema;
         if required[i] {
             requiredSchema.push(fieldName);
@@ -154,5 +155,5 @@ isolated function getStringRepresentation(typedesc<json> fieldType) returns stri
         return "boolean";
     }
 
-    panic error("unimplemented");
+    panic error("JSON schema generation is not yet supported for type: " + fieldType.toString());
 }

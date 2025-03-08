@@ -1,16 +1,8 @@
 name: Daily Build (Connector)
 
 on:
-  workflow_call:
-    inputs:
-      additional-build-flags:
-        required: false
-        type: string
-        default: ""
-      additional-test-flags:
-        required: false
-        type: string
-        default: ""
+  schedule:
+    - cron: "30 2 * * *"
 
 jobs:
   ubuntu-build:
@@ -43,14 +35,14 @@ jobs:
           packageUser: ${{ github.actor }}
           packagePAT: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ./gradlew build -x test ${{ inputs.additional-build-flags }} -PbuildUsingDocker=nightly
+          ./gradlew build -x test -PbuildUsingDocker=nightly
 
       - name: Test the Package
         env:
           packageUser: ${{ github.actor }}
           packagePAT: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ./gradlew test ${{ inputs.additional-test-flags }} -PbuildUsingDocker=nightly
+          ./gradlew test -PbuildUsingDocker=nightly
 
       # Send notification when build fails
       - name: Notify failure

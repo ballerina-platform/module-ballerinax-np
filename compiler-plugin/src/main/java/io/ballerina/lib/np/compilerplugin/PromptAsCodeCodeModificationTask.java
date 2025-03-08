@@ -109,12 +109,12 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
     private static final SimpleNameReferenceNode MODEL_NAME_REF_NODE =
             NodeFactory.createSimpleNameReferenceNode(NodeFactory.createIdentifierToken(MODEL_VAR));
 
-    private final AnalysisData analysisData;
+    private final ModifierData modifierData;
+    private final CodeModifier.AnalysisData analysisData;
 
     PromptAsCodeCodeModificationTask(CodeModifier.AnalysisData analysisData) {
-        this.analysisData = new AnalysisData();
-        this.analysisData.analysisTaskErrored = analysisData.analysisTaskErrored;
-        this.analysisData.typeMapper = analysisData.typeMapper;
+        this.modifierData = new ModifierData();
+        this.analysisData = analysisData;
     }
 
     @Override
@@ -130,54 +130,52 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
 
             for (DocumentId documentId: module.documentIds()) {
                 Document document = module.document(documentId);
-                processImportDeclarations(document, analysisData);
-                processExternalFunctions(document, module, analysisData, modifierContext);
+                processImportDeclarations(document, modifierData);
+                processExternalFunctions(document, module, modifierData, modifierContext);
             }
 
             for (DocumentId documentId: module.documentIds()) {
                 Document document = module.document(documentId);
-                modifierContext.modifySourceFile(
-                        modifyDocument(document, analysisData), documentId);
+                modifierContext.modifySourceFile(modifyDocument(document, modifierData), documentId);
             }
 
             for (DocumentId documentId: module.testDocumentIds()) {
                 Document document = module.document(documentId);
-                modifierContext.modifyTestSourceFile(
-                        modifyDocument(document, analysisData), documentId);
+                modifierContext.modifyTestSourceFile(modifyDocument(document, modifierData), documentId);
             }
         }
     }
 
-    private void processExternalFunctions(Document document, Module module, AnalysisData analysisData,
+    private void processExternalFunctions(Document document, Module module, ModifierData modifierData,
                                           SourceModifierContext modifierContext) {
-        if (analysisData.npPrefixIfImported.isEmpty()) {
+        if (modifierData.npPrefixIfImported.isEmpty()) {
             return;
         }
         SyntaxTree syntaxTree = document.syntaxTree();
         ModulePartNode rootNode = syntaxTree.rootNode();
         SemanticModel semanticModel = modifierContext.compilation().getSemanticModel(module.moduleId());
         for (ModuleMemberDeclarationNode memberNode : rootNode.members()) {
-            if (!isExternalFunctionWithLlmCall(memberNode, analysisData.npPrefixIfImported.get())) {
+            if (!isExternalFunctionWithLlmCall(memberNode, modifierData.npPrefixIfImported.get())) {
                 continue;
             }
 
             FunctionDefinitionNode functionDefinition = (FunctionDefinitionNode) memberNode;
-            extractAndStoreSchemas(semanticModel, functionDefinition, analysisData.typeSchemas,
+            extractAndStoreSchemas(semanticModel, functionDefinition, modifierData.typeSchemas,
                                    this.analysisData.typeMapper);
         }
     }
 
-    private static void processImportDeclarations(Document document, AnalysisData analysisData) {
+    private static void processImportDeclarations(Document document, ModifierData modifierData) {
         ModulePartNode modulePartNode = document.syntaxTree().rootNode();
-        ImportDeclarationModifier importDeclarationModifier = new ImportDeclarationModifier(analysisData);
+        ImportDeclarationModifier importDeclarationModifier = new ImportDeclarationModifier(modifierData);
         modulePartNode.apply(importDeclarationModifier);
     }
 
-    private static TextDocument modifyDocument(Document document, AnalysisData analysisData) {
+    private static TextDocument modifyDocument(Document document, ModifierData modifierData) {
         ModulePartNode modulePartNode = document.syntaxTree().rootNode();
-        FunctionModifier functionModifier = new FunctionModifier(analysisData);
-        TypeDefinitionModifier typeDefinitionModifier = new TypeDefinitionModifier(analysisData.typeSchemas,
-                                                                                   analysisData);
+        FunctionModifier functionModifier = new FunctionModifier(modifierData);
+        TypeDefinitionModifier typeDefinitionModifier = new TypeDefinitionModifier(modifierData.typeSchemas,
+                modifierData);
 
         ModulePartNode modifiedRoot = (ModulePartNode) modulePartNode.apply(functionModifier);
         modifiedRoot = modifiedRoot.modify(modifiedRoot.imports(), modifiedRoot.members(), modifiedRoot.eofToken());
@@ -190,10 +188,10 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
 
     private static class ImportDeclarationModifier extends TreeModifier {
 
-        private AnalysisData analysisData;
+        private final ModifierData modifierData;
 
-        ImportDeclarationModifier(AnalysisData analysisData) {
-            this.analysisData = analysisData;
+        ImportDeclarationModifier(ModifierData modifierData) {
+            this.modifierData = modifierData;
         }
 
         @Override
@@ -210,7 +208,7 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
             }
 
             Optional<ImportPrefixNode> prefix = importDeclarationNode.prefix();
-            analysisData.npPrefixIfImported =
+            modifierData.npPrefixIfImported =
                                            Optional.of(prefix.isEmpty() ? MODULE_NAME : prefix.get().prefix().text());
             return importDeclarationNode;
         }
@@ -218,19 +216,19 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
 
     private static class FunctionModifier extends TreeModifier {
 
-        private AnalysisData analysisData;
+        private final ModifierData modifierData;
 
-        FunctionModifier(AnalysisData analysisData) {
-            this.analysisData = analysisData;
+        FunctionModifier(ModifierData modifierData) {
+            this.modifierData = modifierData;
         }
 
         @Override
         public FunctionDefinitionNode transform(FunctionDefinitionNode functionDefinition) {
-            if (analysisData.npPrefixIfImported.isEmpty()) {
+            if (modifierData.npPrefixIfImported.isEmpty()) {
                 return functionDefinition;
             }
 
-            String npPrefix = analysisData.npPrefixIfImported.get();
+            String npPrefix = modifierData.npPrefixIfImported.get();
 
             FunctionBodyNode functionBodyNode = functionDefinition.functionBody();
 
@@ -298,16 +296,16 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
     private static class TypeDefinitionModifier extends TreeModifier {
 
         private final Map<String, String> typeSchemas;
-        private AnalysisData analysisData;
+        private final ModifierData modifierData;
 
-        TypeDefinitionModifier(Map<String, String> typeSchemas, AnalysisData analysisData) {
+        TypeDefinitionModifier(Map<String, String> typeSchemas, ModifierData modifierData) {
             this.typeSchemas = typeSchemas;
-            this.analysisData = analysisData;
+            this.modifierData = modifierData;
         }
 
         @Override
         public TypeDefinitionNode transform(TypeDefinitionNode typeDefinitionNode) {
-            if (analysisData.npPrefixIfImported.isEmpty()) {
+            if (modifierData.npPrefixIfImported.isEmpty()) {
                 return typeDefinitionNode;
             }
             String typeName = typeDefinitionNode.typeName().text();
@@ -318,7 +316,7 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
 
             MetadataNode updatedMetadataNode =
                                 updateMetadata(typeDefinitionNode, typeSchemas.get(typeName),
-                                               analysisData.npPrefixIfImported);
+                                               modifierData.npPrefixIfImported);
             return typeDefinitionNode.modify().withMetadata(updatedMetadataNode).apply();
         }
 
@@ -517,10 +515,8 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
         schema.setConst(null);
     }
 
-    static final class AnalysisData {
+    static final class ModifierData {
         Optional<String> npPrefixIfImported = Optional.empty();
         Map<String, String> typeSchemas = new HashMap<>();
-        boolean analysisTaskErrored;
-        TypeMapper typeMapper;
     }
 }

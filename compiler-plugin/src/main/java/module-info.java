@@ -22,4 +22,7 @@ module io.ballerina.lib.np.compilerplugin {
     requires io.ballerina.lang;
     requires io.ballerina.parser;
     requires io.ballerina.tools.api;
+    requires io.ballerina.openapi.service;
+    requires io.swagger.v3.core;
+    requires io.swagger.v3.oas.models;
 }

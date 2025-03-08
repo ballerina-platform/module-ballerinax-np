@@ -17,7 +17,15 @@
  */
 package io.ballerina.lib.np.compilerplugin;
 
+import io.ballerina.compiler.api.ModuleID;
+import io.ballerina.compiler.api.SemanticModel;
+import io.ballerina.compiler.api.symbols.ModuleSymbol;
+import io.ballerina.compiler.api.symbols.Symbol;
 import io.ballerina.compiler.syntax.tree.ExternalFunctionBodyNode;
+import io.ballerina.compiler.syntax.tree.ImportDeclarationNode;
+import io.ballerina.compiler.syntax.tree.ModulePartNode;
+
+import java.util.Optional;
 
 /**
  * Class containing common constants and functionality.
@@ -29,8 +37,7 @@ class Commons {
     static final String MODULE_NAME = "np";
     static final String PROMPT_VAR = "prompt";
     static final String MODEL_VAR = "model";
-
-    private static final String LLM_CALL_ANNOT = "LlmCall";
+    static final String LLM_CALL_ANNOT = "LlmCall";
 
     static boolean hasLlmCallAnnotation(ExternalFunctionBodyNode functionBody, String modulePrefix) {
         return hasAnnotation(functionBody, modulePrefix, LLM_CALL_ANNOT);
@@ -42,5 +49,25 @@ class Commons {
         return functionBody.annotations().stream().
                 anyMatch(annotationNode -> annotationNode.annotReference().toString().trim()
                         .equals(annotationRef));
+    }
+
+    static Optional<ModuleSymbol> findNPModule(SemanticModel semanticModel, ModulePartNode rootNode) {
+        for (ImportDeclarationNode importDeclarationNode : rootNode.imports()) {
+            Optional<Symbol> symbolOptional = semanticModel.symbol(importDeclarationNode);
+            if (symbolOptional.isEmpty()) {
+                continue;
+            }
+
+            Symbol symbol = symbolOptional.get();
+            if (symbol instanceof ModuleSymbol moduleSymbol && isNPModuleImport(moduleSymbol)) {
+                return Optional.of(moduleSymbol);
+            }
+        }
+        return Optional.empty();
+    }
+
+    static boolean isNPModuleImport(ModuleSymbol moduleSymbol) {
+        ModuleID moduleId = moduleSymbol.id();
+        return ORG_NAME.equals(moduleId.orgName()) && MODULE_NAME.equals(moduleId.moduleName());
     }
 }

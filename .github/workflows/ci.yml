@@ -1,21 +1,9 @@
 name: Build (Connector)
 
 on:
-  workflow_call:
-    inputs:
-      additional-build-flags:
-        required: false
-        type: string
-        default: ""
-      additional-test-flags:
-        required: false
-        type: string
-        default: ""
-      publish-required:
-        required: false
-        type: boolean
-        default: false
-
+  push:
+    branches:
+      - main
 
 jobs:
   ubuntu-build:
@@ -48,16 +36,6 @@ jobs:
             distribution: 'temurin'
             java-version: 21.0.3
 
-      -   name: Change to Timestamped Version
-          if: ${{ inputs.publish-required == true }}
-          run: |
-            startTime=$(TZ="Asia/Kolkata" date +'%Y%m%d-%H%M00')
-            latestCommit=$(git log -n 1 --pretty=format:"%h")
-            VERSION=$((grep -w 'version' | cut -d= -f2) < gradle.properties | rev | cut --complement -d- -f1 | rev)
-            updatedVersion=$VERSION-$startTime-$latestCommit
-            echo $updatedVersion
-            sed -i "s/version=\(.*\)/version=$updatedVersion/g" gradle.properties
-
       -   name: Set ENV Variables
           run: |
             echo -e '${{ toJson(secrets) }}' | jq -r 'to_entries[] | .key + "=" + .value' >> $GITHUB_ENV
@@ -67,23 +45,14 @@ jobs:
             packageUser: ${{ github.actor }}
             packagePAT: ${{ secrets.GITHUB_TOKEN }}
           run: |
-            ./gradlew build -x test ${{ inputs.additional-build-flags }}
-            ./gradlew test ${{ inputs.additional-test-flags }}
+            ./gradlew build -x test
+            ./gradlew test
 
       - name: Generate CodeCov Report
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: ballerina-platform/${{ github.event.repository.name }}
-
-      -   name: Publish Connector
-          if: ${{ inputs.publish-required == true }}
-          env:
-            packageUser: ${{ secrets.BALLERINA_BOT_USERNAME }}
-            packagePAT: ${{ secrets.BALLERINA_BOT_TOKEN }}
-            publishUser: ${{ secrets.BALLERINA_BOT_USERNAME }}
-            publishPAT: ${{ secrets.BALLERINA_BOT_TOKEN }}
-          run: ./gradlew publish --no-daemon --scan ${{ inputs.additional-build-flags }}
 
       # Send notification when build fails
       - name: Alert notifier on failure

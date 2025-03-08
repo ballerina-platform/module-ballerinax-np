@@ -1,20 +1,9 @@
 name: Publish Release (Connector)
 
 on:
-  workflow_call:
-    inputs:
-      additional-build-flags:
-        required: false
-        type: string
-        default: ""
-      additional-release-flags:
-        required: false
-        type: string
-        default: ""
-      additional-publish-flags:
-        required: false
-        type: string
-        default: ""
+  workflow_dispatch:
+  repository_dispatch:
+    types: [stdlib-release-pipeline]
 
 jobs:
   publish-release:
@@ -56,7 +45,7 @@ jobs:
         run: |
           git config --global user.name ${{ secrets.BALLERINA_BOT_USERNAME }}
           git config --global user.email ${{ secrets.BALLERINA_BOT_EMAIL }}
-          ./gradlew build -x test ${{ inputs.additional-build-flags }}
+          ./gradlew build -x test
 
       - name: Create lib Directory if not Exists
         run: mkdir -p ballerina/lib
@@ -98,8 +87,8 @@ jobs:
           publishUser: ${{ secrets.BALLERINA_BOT_USERNAME }}
           publishPAT: ${{ secrets.BALLERINA_BOT_TOKEN }}
         run: |
-          ./gradlew clean release -Prelease.useAutomaticVersion=true ${{ inputs.additional-release-flags }}
-          ./gradlew -Pversion=${VERSION} publish -x test -PpublishToCentral=true ${{ inputs.additional-publish-flags }}
+          ./gradlew clean release -Prelease.useAutomaticVersion=true
+          ./gradlew -Pversion=${VERSION} publish -x test -PpublishToCentral=true
 
       - name: GitHub Release and Release Sync PR
         env:

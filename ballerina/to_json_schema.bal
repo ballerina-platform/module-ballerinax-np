@@ -19,7 +19,7 @@ import ballerina/jballerina.java;
 type JsonSchema record {|
     string \$schema?;
     string|string[] 'type;
-    map<JsonSchema|JsonArraySchema> properties?;
+    map<JsonSchema|JsonArraySchema|map<json>> properties?;
     string[] required?;
 |};
 
@@ -32,9 +32,9 @@ type JsonArraySchema record {|
 isolated function generateJsonSchemaForTypedescAsString(typedesc<json> td) returns string =>
     generateJsonSchemaForTypedesc(td, containsNil(td)).toJsonString();
 
-isolated function generateJsonSchemaForTypedesc(typedesc<json> td, boolean nilableType) returns JsonSchema|JsonArraySchema {
+isolated function generateJsonSchemaForTypedesc(typedesc<json> td, boolean nilableType) returns JsonSchema|JsonArraySchema|map<json> {
     if isSimpleType(td) {
-        return {
+        return <JsonSchema>{
             'type: getStringRepresentation(<typedesc<json>>td)
         };
     }
@@ -45,8 +45,12 @@ isolated function generateJsonSchemaForTypedesc(typedesc<json> td, boolean nilab
 
     if isArray {
         typedesc<json> arrayMemberType = getArrayMemberType(<typedesc<json[]>>td);
+        map<json>? ann = arrayMemberType.@Schema;
+        if ann !is () {
+            return ann;
+        }
         if isSimpleType(arrayMemberType) {
-            return {
+            return <JsonArraySchema>{
                 \$schema: "https://json-schema.org/draft/2020-12/schema",
                 items: {
                     'type: nilableType ?
@@ -86,7 +90,7 @@ isolated function containsNil(typedesc<json> td) returns boolean = @java:Method 
 
 isolated function generateJsonSchema(string[] names, boolean[] required,
         typedesc<json>[] types, boolean[] nilable, boolean isArray, boolean nilableType) returns JsonSchema|JsonArraySchema {
-    map<JsonSchema|JsonArraySchema> properties = {};
+    map<JsonSchema|JsonArraySchema|map<json>> properties = {};
     string[] requiredSchema = [];
 
     JsonSchema schema = {
@@ -98,7 +102,7 @@ isolated function generateJsonSchema(string[] names, boolean[] required,
 
     foreach int i in 0 ..< names.length() {
         string fieldName = names[i];
-        JsonSchema|JsonArraySchema fieldSchema = getJsonSchemaType(types[i], nilable[i]);
+        JsonSchema|JsonArraySchema|map<json> fieldSchema = getJsonSchemaType(types[i], nilable[i]);
         properties[fieldName] = fieldSchema;
         if required[i] {
             requiredSchema.push(fieldName);
@@ -116,13 +120,13 @@ isolated function generateJsonSchema(string[] names, boolean[] required,
     return schema;
 }
 
-isolated function getJsonSchemaType(typedesc<json> fieldType, boolean nilable) returns JsonSchema|JsonArraySchema {
+isolated function getJsonSchemaType(typedesc<json> fieldType, boolean nilable) returns JsonSchema|JsonArraySchema|map<json> {
     if isSimpleType(fieldType) {
         return nilable ?
-            {
+            <JsonSchema>{
                 'type: [getStringRepresentation(fieldType), "null"]
             } :
-            {
+            <JsonSchema>{
                 'type: getStringRepresentation(fieldType)
             };
     }
@@ -150,5 +154,5 @@ isolated function getStringRepresentation(typedesc<json> fieldType) returns stri
         return "boolean";
     }
 
-    panic error("JSON schema generation is not yet supported for type: " + fieldType.toString());
+    panic error("unimplemented");
 }

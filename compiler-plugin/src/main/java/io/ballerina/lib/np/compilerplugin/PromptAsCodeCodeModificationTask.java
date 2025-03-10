@@ -103,11 +103,6 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
     private static final String STRING = "string";
     private static final String BYTE = "byte";
     private static final String NUMBER = "number";
-    static final String AS = "as";
-    static final String IMPORT = "import";
-    static final String SLASH = "/";
-    static final String SEMI_COLON = ";";
-    static final String WS = " ";
 
     private static final SimpleNameReferenceNode PROMPT_NAME_REF_NODE =
             NodeFactory.createSimpleNameReferenceNode(NodeFactory.createIdentifierToken(PROMPT_VAR));
@@ -401,16 +396,15 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
         return imports;
     }
 
-    public static boolean isNPSchemaAnnotationAvailable(AnnotationNode annotationNode) {
+    private static boolean isNPSchemaAnnotationAvailable(AnnotationNode annotationNode) {
         if (annotationNode.annotReference() instanceof SimpleNameReferenceNode refNode) {
             return refNode.name().text().equals(MODULE_NAME + ":" + SCHEMA_ANNOTATION_IDENTIFIER);
         }
         return false;
     }
 
-    public static ImportDeclarationNode createImportDeclarationForNPModule() {
-        return NodeParser.parseImportDeclaration(IMPORT + WS + ORG_NAME + SLASH + MODULE_NAME + WS + AS + WS +
-                                                 MODULE_NAME + SEMI_COLON);
+    private static ImportDeclarationNode createImportDeclarationForNPModule() {
+        return NodeParser.parseImportDeclaration(String.format("import %s/%s as np;", ORG_NAME, MODULE_NAME));
     }
 
     private boolean isExternalFunctionWithLlmCall(ModuleMemberDeclarationNode memberNode, String npModulePrefixStr) {

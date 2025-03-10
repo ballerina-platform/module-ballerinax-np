@@ -18,10 +18,8 @@
 
 package io.ballerina.lib.np.compilerplugin;
 
-import io.ballerina.compiler.api.ModuleID;
 import io.ballerina.compiler.api.SemanticModel;
 import io.ballerina.compiler.api.symbols.ModuleSymbol;
-import io.ballerina.compiler.api.symbols.Symbol;
 import io.ballerina.compiler.api.symbols.TypeDefinitionSymbol;
 import io.ballerina.compiler.api.symbols.TypeDescKind;
 import io.ballerina.compiler.api.symbols.TypeReferenceTypeSymbol;
@@ -31,7 +29,6 @@ import io.ballerina.compiler.syntax.tree.DefaultableParameterNode;
 import io.ballerina.compiler.syntax.tree.ExternalFunctionBodyNode;
 import io.ballerina.compiler.syntax.tree.FunctionDefinitionNode;
 import io.ballerina.compiler.syntax.tree.FunctionSignatureNode;
-import io.ballerina.compiler.syntax.tree.ImportDeclarationNode;
 import io.ballerina.compiler.syntax.tree.IncludedRecordParameterNode;
 import io.ballerina.compiler.syntax.tree.ModuleMemberDeclarationNode;
 import io.ballerina.compiler.syntax.tree.ModulePartNode;
@@ -52,8 +49,8 @@ import java.util.Optional;
 
 import static io.ballerina.lib.np.compilerplugin.Commons.MODEL_VAR;
 import static io.ballerina.lib.np.compilerplugin.Commons.MODULE_NAME;
-import static io.ballerina.lib.np.compilerplugin.Commons.ORG_NAME;
 import static io.ballerina.lib.np.compilerplugin.Commons.PROMPT_VAR;
+import static io.ballerina.lib.np.compilerplugin.Commons.findNPModule;
 import static io.ballerina.lib.np.compilerplugin.Commons.hasLlmCallAnnotation;
 
 /**
@@ -62,14 +59,13 @@ import static io.ballerina.lib.np.compilerplugin.Commons.hasLlmCallAnnotation;
  * @since 0.3.0
  */
 public class NPFunctionValidator implements AnalysisTask<SyntaxNodeAnalysisContext> {
-
     private static final String PROMPT_TYPE = "Prompt";
     private static final String MODEL_TYPE = "Model";
 
-    private final CodeModifier.AnalysisTaskStatus analysisTaskStatus;
+    private final CodeModifier.AnalysisData analysisData;
 
-    NPFunctionValidator(CodeModifier.AnalysisTaskStatus analysisTaskStatus) {
-        this.analysisTaskStatus = analysisTaskStatus;
+    NPFunctionValidator(CodeModifier.AnalysisData analysisData) {
+        this.analysisData = analysisData;
     }
 
     @Override
@@ -244,31 +240,13 @@ public class NPFunctionValidator implements AnalysisTask<SyntaxNodeAnalysisConte
         }
     }
 
-    private Optional<ModuleSymbol> findNPModule(SemanticModel semanticModel, ModulePartNode rootNode) {
-        for (ImportDeclarationNode importDeclarationNode : rootNode.imports()) {
-            Optional<Symbol> symbolOptional = semanticModel.symbol(importDeclarationNode);
-            if (symbolOptional.isEmpty()) {
-                continue;
-            }
 
-            Symbol symbol = symbolOptional.get();
-            if (symbol instanceof ModuleSymbol moduleSymbol && isNPModuleImport(moduleSymbol)) {
-                return Optional.of(moduleSymbol);
-            }
-        }
-        return Optional.empty();
-    }
-
-    private boolean isNPModuleImport(ModuleSymbol moduleSymbol) {
-        ModuleID moduleId = moduleSymbol.id();
-        return ORG_NAME.equals(moduleId.orgName()) && MODULE_NAME.equals(moduleId.moduleName());
-    }
 
     private void reportDiagnostic(SyntaxNodeAnalysisContext ctx, Location location,
                                   DiagnosticCode diagnosticsCode) {
         DiagnosticInfo diagnosticInfo = new DiagnosticInfo(diagnosticsCode.getCode(),
                 diagnosticsCode.getMessage(), diagnosticsCode.getSeverity());
-        this.analysisTaskStatus.errored = true;
+        this.analysisData.analysisTaskErrored = true;
         ctx.reportDiagnostic(DiagnosticFactory.createDiagnostic(diagnosticInfo, location));
     }
 }

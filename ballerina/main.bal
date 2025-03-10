@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-type DefaultModelConfig DefaultAzureOpenAIModelConfig|DefaultOpenAIModelConfig;
+type DefaultModelConfig DefaultAzureOpenAIModelConfig|DefaultOpenAIModelConfig|DefaultBallerinaAzureOpenAIModelConfig;
 
 type DefaultAzureOpenAIModelConfig record {|
     *AzureOpenAIModelConfig;
@@ -44,15 +44,20 @@ function init() returns error? {
         return;
     }
 
-    string? serviceUrl = defaultModelConfigVar?.serviceUrl;
-    defaultModel = serviceUrl is () ?
-        check new OpenAIModel({
-            connectionConfig: defaultModelConfigVar.connectionConfig
-        }, defaultModelConfigVar.model) :
-        check new OpenAIModel({
-            connectionConfig: defaultModelConfigVar.connectionConfig,
-            serviceUrl
-        }, defaultModelConfigVar.model);
+    if defaultModelConfigVar is DefaultOpenAIModelConfig {
+        string? serviceUrl = defaultModelConfigVar?.serviceUrl;
+        defaultModel = serviceUrl is () ?
+            check new OpenAIModel({
+                connectionConfig: defaultModelConfigVar.connectionConfig
+            }, defaultModelConfigVar.model) :
+            check new OpenAIModel({
+                connectionConfig: defaultModelConfigVar.connectionConfig,
+                serviceUrl
+            }, defaultModelConfigVar.model);
+        return;
+    }
+
+    defaultModel = check new DefaultBallerinaAzureOpenAIModel(defaultModelConfigVar);
 }
 
 isolated function getDefaultModel() returns Model {

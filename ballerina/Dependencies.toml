@@ -351,7 +351,7 @@ modules = [
 [[package]]
 org = "ballerinax"
 name = "openai.chat"
-version = "3.0.0"
+version = "3.0.1"
 dependencies = [
 	{org = "ballerina", name = "constraint"},
 	{org = "ballerina", name = "http"},

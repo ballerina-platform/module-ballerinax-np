@@ -25,6 +25,7 @@ import io.ballerina.compiler.api.symbols.TupleTypeSymbol;
 import io.ballerina.compiler.api.symbols.TypeReferenceTypeSymbol;
 import io.ballerina.compiler.api.symbols.TypeSymbol;
 import io.ballerina.compiler.api.symbols.UnionTypeSymbol;
+import io.ballerina.compiler.syntax.tree.AbstractNodeFactory;
 import io.ballerina.compiler.syntax.tree.AnnotationNode;
 import io.ballerina.compiler.syntax.tree.DefaultableParameterNode;
 import io.ballerina.compiler.syntax.tree.ExpressionFunctionBodyNode;
@@ -39,6 +40,8 @@ import io.ballerina.compiler.syntax.tree.ImportOrgNameNode;
 import io.ballerina.compiler.syntax.tree.ImportPrefixNode;
 import io.ballerina.compiler.syntax.tree.MappingConstructorExpressionNode;
 import io.ballerina.compiler.syntax.tree.MetadataNode;
+import io.ballerina.compiler.syntax.tree.Minutiae;
+import io.ballerina.compiler.syntax.tree.MinutiaeList;
 import io.ballerina.compiler.syntax.tree.ModuleMemberDeclarationNode;
 import io.ballerina.compiler.syntax.tree.ModulePartNode;
 import io.ballerina.compiler.syntax.tree.NodeFactory;
@@ -103,6 +106,8 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
     private static final String STRING = "string";
     private static final String BYTE = "byte";
     private static final String NUMBER = "number";
+    static final String AS = "as";
+    static final String IMPORT = "import";
 
     private static final SimpleNameReferenceNode PROMPT_NAME_REF_NODE =
             NodeFactory.createSimpleNameReferenceNode(NodeFactory.createIdentifierToken(PROMPT_VAR));
@@ -181,7 +186,7 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
         modifiedRoot = modifiedRoot.modify(modifiedRoot.imports(), modifiedRoot.members(), modifiedRoot.eofToken());
 
         ModulePartNode finalRoot = (ModulePartNode) modifiedRoot.apply(typeDefinitionModifier);
-        finalRoot = finalRoot.modify(finalRoot.imports(), finalRoot.members(), finalRoot.eofToken());
+        finalRoot = finalRoot.modify(updateImports(finalRoot), finalRoot.members(), finalRoot.eofToken());
 
         return document.syntaxTree().modifyWith(finalRoot).textDocument();
     }
@@ -329,8 +334,8 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
         }
     }
 
-    public static MetadataNode getMetadataNode(TypeDefinitionNode serviceNode) {
-        return serviceNode.metadata().orElseGet(() -> {
+    public static MetadataNode getMetadataNode(TypeDefinitionNode typeDefinitionNode) {
+        return typeDefinitionNode.metadata().orElseGet(() -> {
             NodeList<AnnotationNode> annotations = NodeFactory.createNodeList();
             return NodeFactory.createMetadataNode(null, annotations);
         });
@@ -360,6 +365,69 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
 
     public static MappingConstructorExpressionNode getAnnotationExpression(String jsonSchema) {
         return (MappingConstructorExpressionNode) NodeParser.parseExpression(jsonSchema);
+    }
+
+    private static boolean containsBallerinaxNpImport(NodeList<ImportDeclarationNode> imports) {
+        for (ImportDeclarationNode importDeclarationNode : imports) {
+            Optional<ImportOrgNameNode> importOrgNameNode = importDeclarationNode.orgName();
+            if (importOrgNameNode.isPresent() && importOrgNameNode.get().orgName().text().equals(ORG_NAME)
+                    && importDeclarationNode.moduleName().get(0).text().equals(MODULE_NAME)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static NodeList<ImportDeclarationNode> updateImports(ModulePartNode modulePartNode) {
+        NodeList<ImportDeclarationNode> imports = modulePartNode.imports();
+        NodeList<ModuleMemberDeclarationNode> members = modulePartNode.members();
+        if (containsBallerinaxNpImport(imports)) {
+            return imports;
+        }
+
+        for (ModuleMemberDeclarationNode memberNode : members) {
+            if (memberNode.kind() != SyntaxKind.TYPE_DEFINITION) {
+                continue;
+            }
+
+            TypeDefinitionNode typeDefinitionNode = (TypeDefinitionNode) memberNode;
+            NodeList<AnnotationNode> annotations = getMetadataNode(typeDefinitionNode).annotations();
+            for (AnnotationNode annotation: annotations) {
+                if (isNPSchemaAnnotationAvailable(annotation)) {
+                    return imports.add(createImportDeclarationNodeForModule());
+                }
+            }
+        }
+        return imports;
+    }
+
+    public static boolean isNPSchemaAnnotationAvailable(AnnotationNode annotationNode) {
+        if (annotationNode.annotReference() instanceof SimpleNameReferenceNode refNode) {
+            return refNode.name().text().equals(MODULE_NAME + ":" + SCHEMA_ANNOTATION_IDENTIFIER);
+        }
+        return false;
+    }
+
+    public static ImportDeclarationNode createImportDeclarationNodeForModule() {
+        Token importKeyword = AbstractNodeFactory.createIdentifierToken(IMPORT, getSingleWSMinutiae(),
+                getSingleWSMinutiae());
+        Token slashToken = NodeFactory.createToken(SyntaxKind.SLASH_TOKEN);
+        Token orgNameToken = AbstractNodeFactory.createIdentifierToken(ORG_NAME);
+        ImportOrgNameNode importOrgNameNode = NodeFactory.createImportOrgNameNode(orgNameToken, slashToken);
+        Token moduleNameToken = AbstractNodeFactory.createIdentifierToken(MODULE_NAME);
+        SeparatedNodeList<IdentifierToken> moduleNodeList = AbstractNodeFactory
+                .createSeparatedNodeList(moduleNameToken);
+        ImportPrefixNode prefix = NodeFactory.createImportPrefixNode(
+                AbstractNodeFactory.createIdentifierToken(AS, getSingleWSMinutiae(), getSingleWSMinutiae()),
+                NodeFactory.createIdentifierToken(MODULE_NAME));
+        Token semicolon = NodeFactory.createToken(SyntaxKind.SEMICOLON_TOKEN);
+        return NodeFactory.createImportDeclarationNode(importKeyword, importOrgNameNode,
+                moduleNodeList, prefix, semicolon);
+    }
+
+    private static MinutiaeList getSingleWSMinutiae() {
+        Minutiae whitespace = AbstractNodeFactory.createWhitespaceMinutiae(" ");
+        return AbstractNodeFactory.createMinutiaeList(whitespace);
     }
 
     private boolean isExternalFunctionWithLlmCall(ModuleMemberDeclarationNode memberNode, String npModulePrefixStr) {

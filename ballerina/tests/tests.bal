@@ -136,7 +136,8 @@ service /llm on new http:Listener(8080) {
                     logprobs: (),
                     message: {
                         role: "assistant",
-                        content: review2.toJsonString()
+                        content: review2.toJsonString(),
+                        refusal: ()
                     }
                 }
             ]

@@ -181,7 +181,7 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
         modifiedRoot = modifiedRoot.modify(modifiedRoot.imports(), modifiedRoot.members(), modifiedRoot.eofToken());
 
         ModulePartNode finalRoot = (ModulePartNode) modifiedRoot.apply(typeDefinitionModifier);
-        finalRoot = finalRoot.modify(finalRoot.imports(), finalRoot.members(), finalRoot.eofToken());
+        finalRoot = finalRoot.modify(updateImports(finalRoot), finalRoot.members(), finalRoot.eofToken());
 
         return document.syntaxTree().modifyWith(finalRoot).textDocument();
     }
@@ -329,8 +329,8 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
         }
     }
 
-    public static MetadataNode getMetadataNode(TypeDefinitionNode serviceNode) {
-        return serviceNode.metadata().orElseGet(() -> {
+    public static MetadataNode getMetadataNode(TypeDefinitionNode typeDefinitionNode) {
+        return typeDefinitionNode.metadata().orElseGet(() -> {
             NodeList<AnnotationNode> annotations = NodeFactory.createNodeList();
             return NodeFactory.createMetadataNode(null, annotations);
         });
@@ -360,6 +360,51 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
 
     public static MappingConstructorExpressionNode getAnnotationExpression(String jsonSchema) {
         return (MappingConstructorExpressionNode) NodeParser.parseExpression(jsonSchema);
+    }
+
+    private static boolean containsBallerinaxNPImport(NodeList<ImportDeclarationNode> imports) {
+        for (ImportDeclarationNode importDeclarationNode : imports) {
+            Optional<ImportOrgNameNode> importOrgNameNode = importDeclarationNode.orgName();
+            if (importOrgNameNode.isPresent() && importOrgNameNode.get().orgName().text().equals(ORG_NAME)
+                    && importDeclarationNode.moduleName().get(0).text().equals(MODULE_NAME)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static NodeList<ImportDeclarationNode> updateImports(ModulePartNode modulePartNode) {
+        NodeList<ImportDeclarationNode> imports = modulePartNode.imports();
+        NodeList<ModuleMemberDeclarationNode> members = modulePartNode.members();
+        if (containsBallerinaxNPImport(imports)) {
+            return imports;
+        }
+
+        for (ModuleMemberDeclarationNode memberNode : members) {
+            if (memberNode.kind() != SyntaxKind.TYPE_DEFINITION) {
+                continue;
+            }
+
+            TypeDefinitionNode typeDefinitionNode = (TypeDefinitionNode) memberNode;
+            NodeList<AnnotationNode> annotations = getMetadataNode(typeDefinitionNode).annotations();
+            for (AnnotationNode annotation: annotations) {
+                if (isNPSchemaAnnotationAvailable(annotation)) {
+                    return imports.add(createImportDeclarationForNPModule());
+                }
+            }
+        }
+        return imports;
+    }
+
+    private static boolean isNPSchemaAnnotationAvailable(AnnotationNode annotationNode) {
+        if (annotationNode.annotReference() instanceof SimpleNameReferenceNode refNode) {
+            return refNode.name().text().equals(MODULE_NAME + ":" + SCHEMA_ANNOTATION_IDENTIFIER);
+        }
+        return false;
+    }
+
+    private static ImportDeclarationNode createImportDeclarationForNPModule() {
+        return NodeParser.parseImportDeclaration(String.format("import %s/%s as np;", ORG_NAME, MODULE_NAME));
     }
 
     private boolean isExternalFunctionWithLlmCall(ModuleMemberDeclarationNode memberNode, String npModulePrefixStr) {

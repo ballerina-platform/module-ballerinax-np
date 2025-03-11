@@ -42,9 +42,9 @@ public isolated distinct client class AzureOpenAIModel {
         self.apiVersion = apiVersion;
     }
 
-    isolated remote function call(Prompt prompt, typedesc<json> td) returns string|error {
+    isolated remote function call(string prompt, map<json> expectedResponseSchema) returns json|error {
         chat:CreateChatCompletionRequest chatBody = {
-            messages: [{role: "user", "content": buildPromptString(prompt, td)}]
+            messages: [{role: "user", "content": getPromptWithExpectedResponseSchema(prompt, expectedResponseSchema)}]
         };
 
         chat:Client cl = self.cl;
@@ -65,6 +65,6 @@ public isolated distinct client class AzureOpenAIModel {
         if resp is () {
             return error("No completion message");
         }
-        return resp;
+        return parseResponseAsJson(resp);
     }
 }

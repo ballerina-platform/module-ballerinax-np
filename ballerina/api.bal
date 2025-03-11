@@ -65,11 +65,10 @@ public type Context record {|
 # Abstraction for a Large Language Model (LLM), with chat/completion functionality.
 public type Model distinct isolated client object {
 
-    # Makes a call to the Language Model (LLM) with the given prompt and returns the result.
+    # Makes a call to the Large Language Model (LLM) with the given prompt and returns the result.
     #
     # + prompt - The prompt to be sent to the LLM
-    # + td - The type descriptor for the expected return type to be used as the schema with
-    # the prompt
-    # + return - A string containing the LLM's response or an error if the call fails
-    isolated remote function call(Prompt prompt, typedesc<json> td) returns string|error;
+    # + expectedResponseSchema - The schema for the expected response from the LLM 
+    # + return - The JSON value extracted/parsed from the LLM's response or an error if the call fails
+    isolated remote function call(string prompt, map<json> expectedResponseSchema) returns json|error;
 };

@@ -41,9 +41,9 @@ public isolated distinct client class DefaultBallerinaAzureOpenAIModel {
         });
     }
 
-    isolated remote function call(Prompt prompt, typedesc<json> td) returns string|error {
+    isolated remote function call(string prompt, map<json> expectedResponseSchema) returns json|error {
         chat:CreateChatCompletionRequest chatBody = {
-            messages: [{role: "user", "content": buildPromptString(prompt, td)}]
+            messages: [{role: "user", "content": getPromptWithExpectedResponseSchema(prompt, expectedResponseSchema)}]
         };
 
         http:Client cl = self.cl;
@@ -63,6 +63,6 @@ public isolated distinct client class DefaultBallerinaAzureOpenAIModel {
         if resp is () {
             return error("No completion message");
         }
-        return resp;
+        return parseResponseAsJson(resp);
     }
 }

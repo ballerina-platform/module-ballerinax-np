@@ -29,8 +29,9 @@ type JsonArraySchema record {|
     JsonSchema items;
 |};
 
-isolated function generateJsonSchemaForTypedescAsString(typedesc<json> td) returns string =>
-    generateJsonSchemaForTypedesc(td, containsNil(td)).toJsonString();
+isolated function generateJsonSchemaForTypedescAsJson(typedesc<json> td) returns map<json> =>
+    let map<json>? ann = td.@Schema in 
+        ann ?: generateJsonSchemaForTypedesc(td, containsNil(td));
 
 isolated function generateJsonSchemaForTypedesc(typedesc<json> td, boolean nilableType) returns JsonSchema|JsonArraySchema|map<json> {
     if isSimpleType(td) {

@@ -82,7 +82,7 @@ import static io.ballerina.lib.np.compilerplugin.Commons.MODEL_VAR;
 import static io.ballerina.lib.np.compilerplugin.Commons.MODULE_NAME;
 import static io.ballerina.lib.np.compilerplugin.Commons.ORG_NAME;
 import static io.ballerina.lib.np.compilerplugin.Commons.PROMPT_VAR;
-import static io.ballerina.lib.np.compilerplugin.Commons.hasLlmCallAnnotation;
+import static io.ballerina.lib.np.compilerplugin.Commons.hasNaturalFunctionAnnotation;
 import static io.ballerina.projects.util.ProjectConstants.EMPTY_STRING;
 
 /**
@@ -155,7 +155,7 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
         ModulePartNode rootNode = syntaxTree.rootNode();
         SemanticModel semanticModel = modifierContext.compilation().getSemanticModel(module.moduleId());
         for (ModuleMemberDeclarationNode memberNode : rootNode.members()) {
-            if (!isExternalFunctionWithLlmCall(memberNode, modifierData.npPrefixIfImported.get())) {
+            if (!isExternalFunctionWithNaturalFunctionAnnotation(memberNode, modifierData.npPrefixIfImported.get())) {
                 continue;
             }
 
@@ -236,7 +236,7 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
                 return functionDefinition;
             }
 
-            if (hasLlmCallAnnotation(functionBody, npPrefix)) {
+            if (hasNaturalFunctionAnnotation(functionBody, npPrefix)) {
                 ExpressionFunctionBodyNode expressionFunctionBody =
                         NodeFactory.createExpressionFunctionBodyNode(
                                 RIGHT_DOUBLE_ARROW,
@@ -407,12 +407,13 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
         return NodeParser.parseImportDeclaration(String.format("import %s/%s as np;", ORG_NAME, MODULE_NAME));
     }
 
-    private boolean isExternalFunctionWithLlmCall(ModuleMemberDeclarationNode memberNode, String npModulePrefixStr) {
+    private boolean isExternalFunctionWithNaturalFunctionAnnotation(ModuleMemberDeclarationNode memberNode,
+                                                                    String npModulePrefixStr) {
         if (!(memberNode instanceof FunctionDefinitionNode functionDefinition)) {
             return false;
         }
         return functionDefinition.functionBody() instanceof ExternalFunctionBodyNode externalFunctionBodyNode
-                && hasLlmCallAnnotation(externalFunctionBodyNode, npModulePrefixStr);
+                && hasNaturalFunctionAnnotation(externalFunctionBodyNode, npModulePrefixStr);
     }
 
     private void extractAndStoreSchemas(SemanticModel semanticModel, FunctionDefinitionNode functionDefinition,

@@ -51,7 +51,7 @@ import static io.ballerina.lib.np.compilerplugin.Commons.MODEL_VAR;
 import static io.ballerina.lib.np.compilerplugin.Commons.MODULE_NAME;
 import static io.ballerina.lib.np.compilerplugin.Commons.PROMPT_VAR;
 import static io.ballerina.lib.np.compilerplugin.Commons.findNPModule;
-import static io.ballerina.lib.np.compilerplugin.Commons.hasLlmCallAnnotation;
+import static io.ballerina.lib.np.compilerplugin.Commons.hasNaturalFunctionAnnotation;
 
 /**
  * Natural programming function signature validator.
@@ -112,7 +112,7 @@ public class NPFunctionValidator implements AnalysisTask<SyntaxNodeAnalysisConte
                                                       String npModulePrefix, TypeSymbol promptType,
                                                       TypeSymbol modelType) {
         if (!(functionDefinitionNode.functionBody() instanceof ExternalFunctionBodyNode externalFunctionBodyNode) ||
-                !hasLlmCallAnnotation(externalFunctionBodyNode, npModulePrefix)) {
+                !hasNaturalFunctionAnnotation(externalFunctionBodyNode, npModulePrefix)) {
             return;
         }
 

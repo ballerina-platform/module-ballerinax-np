@@ -18,7 +18,7 @@ import ballerina/jballerina.java;
 
 # Configuration for the model to default to if not explicitly
 # specified in the call to function `callLlm` or an external
-# function annotated with annotation `LlmCall`.
+# function annotated with annotation `NaturalFunction`.
 configurable DefaultModelConfig? defaultModelConfig = ();
 
 # Raw template type for prompts.
@@ -55,7 +55,7 @@ public isolated function callLlm(Prompt prompt, Model model = getDefaultModel(),
 # If function has a `model` parameter, it will be used as the model to call.
 # If not, defaults to the default model configured via the configurable 
 # variable `defaultModelConfig`
-public const annotation LlmCall on source external;
+public const annotation NaturalFunction on source external;
 
 # Abstraction for a Large Language Model (LLM), with chat/completion functionality.
 public type Model distinct isolated client object {

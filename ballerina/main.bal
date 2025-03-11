@@ -70,29 +70,34 @@ isolated function getDefaultModel() returns Model {
     return defaultModelVar;
 }
 
-isolated function buildPromptString(Prompt prompt, typedesc<json> td) returns string {
+isolated function buildPromptString(Prompt prompt) returns string {
     string str = prompt.strings[0];
     anydata[] insertions = prompt.insertions;
     foreach int i in 0 ..< insertions.length() {
         str = str + insertions[i].toString() + prompt.strings[i + 1];
     }
+    return str;
+}
 
-    map<json>? ann = td.@Schema;
-    string schema = ann is () ? generateJsonSchemaForTypedescAsString(td) : ann.toJsonString();
-    return string `${str}.  
+isolated function getPromptWithExpectedResponseSchema(string prompt, map<json> expectedResponseSchema) returns string =>
+    string `${prompt}.  
         The output should be a JSON value that satisfies the following JSON schema, 
         returned within a markdown snippet enclosed within ${"```json"} and ${"```"}
         
         Schema:
-        ${schema}`;
+        ${expectedResponseSchema.toJsonString()}`;
+
+isolated function callLlmGeneric(Prompt prompt, Context context, typedesc<json> targetType) returns json|error {
+    Model model = context.model;
+    json resp = 
+        check model->call(buildPromptString(prompt), generateJsonSchemaForTypedescAsJson(targetType));
+    return parseResponseAsType(resp, targetType);
 }
 
-isolated function callLlmBal(Prompt prompt, Model model, typedesc<json> td) returns json|error {
-    string resp = check model->call(prompt, td);
-    return parseResponse(resp, td);
-}
-
-isolated function parseResponse(string resp, typedesc<json> td) returns json|error {
+isolated function parseResponseAsJson(string resp) returns json|error {
     string processedResponse = re `${"```json|```"}`.replaceAll(resp, "");
-    return processedResponse.fromJsonStringWithType(td);
+    return processedResponse.fromJsonString();
 }
+
+isolated function parseResponseAsType(json resp, typedesc<json> targetType) returns json|error =>
+    resp.fromJsonWithType(targetType);

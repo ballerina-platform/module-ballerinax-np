@@ -28,6 +28,7 @@ import io.ballerina.runtime.api.types.UnionType;
 import io.ballerina.runtime.api.utils.StringUtils;
 import io.ballerina.runtime.api.utils.TypeUtils;
 import io.ballerina.runtime.api.values.BArray;
+import io.ballerina.runtime.api.values.BMap;
 import io.ballerina.runtime.api.values.BObject;
 import io.ballerina.runtime.api.values.BTypedesc;
 
@@ -37,9 +38,9 @@ import io.ballerina.runtime.api.values.BTypedesc;
  * @since 0.3.0
  */
 public class Native {
-    public static Object callLlmCallBallerinaFunction(Environment env, BObject prompt, BObject model, BTypedesc td) {
+    public static Object callLlm(Environment env, BObject prompt, BMap context, BTypedesc targetType) {
         return env.getRuntime().callFunction(
-                new Module("ballerinax", "np", "0"), "callLlmBal", null, prompt, model, td);
+                new Module("ballerinax", "np", "0"), "callLlmGeneric", null, prompt, context, targetType);
     }
 
     // Simple, simple, SIMPLE implementation for now.
@@ -67,12 +68,12 @@ public class Native {
         }
     }
 
-    public static BTypedesc getArrayMemberType(BTypedesc td) {
+    public static BTypedesc getArrayMemberType(BTypedesc targetType) {
         return ValueCreator.createTypedescValue(
-                ((ArrayType) TypeUtils.getImpliedType(td.getDescribingType())).getElementType());
+                ((ArrayType) TypeUtils.getImpliedType(targetType.getDescribingType())).getElementType());
     }
 
-    public static boolean containsNil(BTypedesc td) {
-        return td.getDescribingType().isNilable();
+    public static boolean containsNil(BTypedesc targetType) {
+        return targetType.getDescribingType().isNilable();
     }
 }

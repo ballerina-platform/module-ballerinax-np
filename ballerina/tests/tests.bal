@@ -60,7 +60,7 @@ function testPromptAsCodeFunctionWithStructuredExpectedTypeWithOpenAIClient() re
     }, "gpt4o");
     Review review = check callLlm(`Rate this blog out of 10.
         Title: ${blog2.title}
-        Content: ${blog2.content}`, model);
+        Content: ${blog2.content}`, {model});
     test:assertEquals(review, review2);
 }
 

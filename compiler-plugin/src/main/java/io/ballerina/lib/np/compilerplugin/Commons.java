@@ -36,11 +36,11 @@ class Commons {
     static final String ORG_NAME = "ballerinax";
     static final String MODULE_NAME = "np";
     static final String PROMPT_VAR = "prompt";
-    static final String MODEL_VAR = "model";
-    static final String LLM_CALL_ANNOT = "LlmCall";
+    static final String CONTEXT_VAR = "context";
+    static final String NATURAL_FUNCTION_ANNOT = "NaturalFunction";
 
-    static boolean hasLlmCallAnnotation(ExternalFunctionBodyNode functionBody, String modulePrefix) {
-        return hasAnnotation(functionBody, modulePrefix, LLM_CALL_ANNOT);
+    static boolean hasNaturalFunctionAnnotation(ExternalFunctionBodyNode functionBody, String modulePrefix) {
+        return hasAnnotation(functionBody, modulePrefix, NATURAL_FUNCTION_ANNOT);
     }
 
     static boolean hasAnnotation(ExternalFunctionBodyNode functionBody, String modulePrefix,

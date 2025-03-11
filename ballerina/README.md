@@ -4,9 +4,9 @@ The natural programming library module provides seamless integration with Large 
 
 This simplifies working with AI models by handling the communication and data conversion automatically.
 
-## The `np:LlmCall` annotation
+## The `np:NaturalFunction` annotation
 
-An `external` function annotated with `np:LlmCall` and with a `prompt` parameter of type `np:Prompt` becomes an LLM call with the specified prompt. The JSON schema generated from the return type of the function is incorporated to the LLM call and the response from the LLM is automatically parsed to the type used as the return type.
+An `external` function annotated with `np:NaturalFunction` and with a `prompt` parameter of type `np:Prompt` becomes an LLM call with the specified prompt. The JSON schema generated from the return type of the function is incorporated to the LLM call and the response from the LLM is automatically parsed to the type used as the return type.
 
 ```ballerina
 import ballerinax/np;
@@ -43,7 +43,7 @@ public isolated function reviewBlog(
 
         **Blog Post Content:**
         ${blog.title}
-        ${blog.content}`) returns Review|error = @np:LlmCall external;
+        ${blog.content}`) returns Review|error = @np:NaturalFunction external;
 ```
 
 Note how the prompt refers to preceding parameters. These functions, thus, become a type-safe approach to share and reuse prompts.
@@ -54,7 +54,7 @@ The function can then be used in the code similar to any other function.
 Review review = check reviewBlog(blog);
 ```
 
-The model to use can be set either by configuration or by introducing a `model` parameter of type `np:Model` to the function.
+The model to use can be set either by configuration or by introducing a `context` parameter of type `np:Context`, with a `model` field of type `np:Model`, in the function.
 
 1. Configuration
 
@@ -68,14 +68,14 @@ The model to use can be set either by configuration or by introducing a `model` 
     connectionConfig.auth.apiKey = "<YOUR_API_KEY>"
     ```
 
-2. Model as a parameter
+2. Model in a parameter
 
-    Alternatively, to have more control over the model for each function, a `model` parameter of type `np:Model` can be specified in the function.
+    Alternatively, to have more control over the model for each function, a `context` parameter of type `np:Context`, with the `model` field of type `np:Model`, can be introduced in the function.
 
     ```ballerina
     public isolated function reviewBlog(
         Blog blog,
-        np:Model model,
+        np:Context context,
         np:Prompt prompt = `You are an expert content reviewer for a blog site that 
             categorizes posts under the following categories: ${categories}
 
@@ -83,11 +83,11 @@ The model to use can be set either by configuration or by introducing a `model` 
 
             **Blog Post Content:**
             ${blog.title}
-            ${blog.content}`) returns Review|error = @np:LlmCall external;
+            ${blog.content}`) returns Review|error = @np:NaturalFunction external;
     ```
 
 
-The `ballerinax/np` model provides implementations of `np:Model` for different LLM providers: 
+The `ballerinax/np` module provides implementations of `np:Model` for different LLM providers: 
 
 - `np:OpenAIModel` for Open AI
 - `np:AzureOpenAIModel` for Azure Open AI
@@ -104,14 +104,14 @@ configurable string apiVersion = ?;
 final np:Model azureOpenAIModel = check new np:AzureOpenAIModel({
        serviceUrl, connectionConfig: {auth: {apiKey}}}, deploymentId, apiVersion);
 
-Review review = check reviewBlog(blog, azureOpenAIModel);
+Review review = check reviewBlog(blog, {model: azureOpenAIModel});
 ```
 
 ## The `np:callLlm` function
 
-The `np:callLlm` function is an alternative to defining a separate function with the `np:LlmCall` annotation.
+The `np:callLlm` function is an alternative to defining a separate function with the `np:NaturalFunction` annotation.
 
-The function accepts a prompt of type `np:Prompt` and optionally, an `np:Model` value. If the model is not specified, it has to be configured via the `defaultModelConfig` configurable variable. The function is dependently-typed and uses the inferred typedesc parameter to construct the JSON schema for the required response format and bind the response data to the expected type.
+The function accepts a prompt of type `np:Prompt` and optionally, an `np:Conext` value with the `model` field of type `np:Model`. If the model is not specified, it has to be configured via the `defaultModelConfig` configurable variable. The function is dependently-typed and uses the inferred typedesc parameter to construct the JSON schema for the required response format and bind the response data to the expected type.
 
 ```ballerina
 // Where `blog` is in scope.
@@ -122,5 +122,5 @@ Review review = check np:callLlm(`You are an expert content reviewer for a blog 
 
             **Blog Post Content:**
             ${blog.title}
-            ${blog.content}`, azureOpenAIModel);
+            ${blog.content}`, {model: azureOpenAIModel});
 ```

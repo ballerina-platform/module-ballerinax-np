@@ -78,11 +78,11 @@ import static io.ballerina.compiler.syntax.tree.SyntaxKind.CLOSE_PAREN_TOKEN;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.DEFAULTABLE_PARAM;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.OPEN_PAREN_TOKEN;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.REQUIRED_PARAM;
-import static io.ballerina.lib.np.compilerplugin.Commons.MODEL_VAR;
+import static io.ballerina.lib.np.compilerplugin.Commons.CONTEXT_VAR;
 import static io.ballerina.lib.np.compilerplugin.Commons.MODULE_NAME;
 import static io.ballerina.lib.np.compilerplugin.Commons.ORG_NAME;
 import static io.ballerina.lib.np.compilerplugin.Commons.PROMPT_VAR;
-import static io.ballerina.lib.np.compilerplugin.Commons.hasLlmCallAnnotation;
+import static io.ballerina.lib.np.compilerplugin.Commons.hasNaturalFunctionAnnotation;
 import static io.ballerina.projects.util.ProjectConstants.EMPTY_STRING;
 
 /**
@@ -106,8 +106,8 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
 
     private static final SimpleNameReferenceNode PROMPT_NAME_REF_NODE =
             NodeFactory.createSimpleNameReferenceNode(NodeFactory.createIdentifierToken(PROMPT_VAR));
-    private static final SimpleNameReferenceNode MODEL_NAME_REF_NODE =
-            NodeFactory.createSimpleNameReferenceNode(NodeFactory.createIdentifierToken(MODEL_VAR));
+    private static final SimpleNameReferenceNode CONTEXT_NAME_REF_NODE =
+            NodeFactory.createSimpleNameReferenceNode(NodeFactory.createIdentifierToken(CONTEXT_VAR));
 
     private final ModifierData modifierData;
     private final CodeModifier.AnalysisData analysisData;
@@ -155,7 +155,7 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
         ModulePartNode rootNode = syntaxTree.rootNode();
         SemanticModel semanticModel = modifierContext.compilation().getSemanticModel(module.moduleId());
         for (ModuleMemberDeclarationNode memberNode : rootNode.members()) {
-            if (!isExternalFunctionWithLlmCall(memberNode, modifierData.npPrefixIfImported.get())) {
+            if (!isExternalFunctionWithNaturalFunctionAnnotation(memberNode, modifierData.npPrefixIfImported.get())) {
                 continue;
             }
 
@@ -236,7 +236,7 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
                 return functionDefinition;
             }
 
-            if (hasLlmCallAnnotation(functionBody, npPrefix)) {
+            if (hasNaturalFunctionAnnotation(functionBody, npPrefix)) {
                 ExpressionFunctionBodyNode expressionFunctionBody =
                         NodeFactory.createExpressionFunctionBodyNode(
                                 RIGHT_DOUBLE_ARROW,
@@ -252,12 +252,12 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
             for (ParameterNode parameter : functionDefinition.functionSignature().parameters()) {
                 SyntaxKind kind = parameter.kind();
                 if (kind == REQUIRED_PARAM &&
-                        MODEL_VAR.equals(((RequiredParameterNode) parameter).paramName().get().text())) {
+                        CONTEXT_VAR.equals(((RequiredParameterNode) parameter).paramName().get().text())) {
                     return true;
                 }
 
                 if (kind == DEFAULTABLE_PARAM &&
-                        MODEL_VAR.equals(((DefaultableParameterNode) parameter).paramName().get().text())) {
+                        CONTEXT_VAR.equals(((DefaultableParameterNode) parameter).paramName().get().text())) {
                     return true;
                 }
             }
@@ -272,7 +272,7 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
                         NodeFactory.createSeparatedNodeList(
                                 NodeFactory.createPositionalArgumentNode(PROMPT_NAME_REF_NODE),
                                 COMMA,
-                                NodeFactory.createPositionalArgumentNode(MODEL_NAME_REF_NODE)
+                                NodeFactory.createPositionalArgumentNode(CONTEXT_NAME_REF_NODE)
                         ) :
                         NodeFactory.createSeparatedNodeList(
                                 NodeFactory.createPositionalArgumentNode(PROMPT_NAME_REF_NODE)
@@ -407,12 +407,13 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
         return NodeParser.parseImportDeclaration(String.format("import %s/%s as np;", ORG_NAME, MODULE_NAME));
     }
 
-    private boolean isExternalFunctionWithLlmCall(ModuleMemberDeclarationNode memberNode, String npModulePrefixStr) {
+    private boolean isExternalFunctionWithNaturalFunctionAnnotation(ModuleMemberDeclarationNode memberNode,
+                                                                    String npModulePrefixStr) {
         if (!(memberNode instanceof FunctionDefinitionNode functionDefinition)) {
             return false;
         }
         return functionDefinition.functionBody() instanceof ExternalFunctionBodyNode externalFunctionBodyNode
-                && hasLlmCallAnnotation(externalFunctionBodyNode, npModulePrefixStr);
+                && hasNaturalFunctionAnnotation(externalFunctionBodyNode, npModulePrefixStr);
     }
 
     private void extractAndStoreSchemas(SemanticModel semanticModel, FunctionDefinitionNode functionDefinition,

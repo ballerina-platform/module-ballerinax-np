@@ -28,6 +28,7 @@ import io.ballerina.runtime.api.types.UnionType;
 import io.ballerina.runtime.api.utils.StringUtils;
 import io.ballerina.runtime.api.utils.TypeUtils;
 import io.ballerina.runtime.api.values.BArray;
+import io.ballerina.runtime.api.values.BMap;
 import io.ballerina.runtime.api.values.BObject;
 import io.ballerina.runtime.api.values.BTypedesc;
 
@@ -37,9 +38,9 @@ import io.ballerina.runtime.api.values.BTypedesc;
  * @since 0.3.0
  */
 public class Native {
-    public static Object callLlmCallBallerinaFunction(Environment env, BObject prompt, BObject model, BTypedesc td) {
+    public static Object callLlmCallBallerinaFunction(Environment env, BObject prompt, BMap context, BTypedesc td) {
         return env.getRuntime().callFunction(
-                new Module("ballerinax", "np", "0"), "callLlmBal", null, prompt, model, td);
+                new Module("ballerinax", "np", "0"), "callLlmBal", null, prompt, context, td);
     }
 
     // Simple, simple, SIMPLE implementation for now.

@@ -47,7 +47,7 @@ import io.ballerina.tools.diagnostics.Location;
 
 import java.util.Optional;
 
-import static io.ballerina.lib.np.compilerplugin.Commons.MODEL_VAR;
+import static io.ballerina.lib.np.compilerplugin.Commons.CONTEXT_VAR;
 import static io.ballerina.lib.np.compilerplugin.Commons.MODULE_NAME;
 import static io.ballerina.lib.np.compilerplugin.Commons.PROMPT_VAR;
 import static io.ballerina.lib.np.compilerplugin.Commons.findNPModule;
@@ -60,7 +60,7 @@ import static io.ballerina.lib.np.compilerplugin.Commons.hasNaturalFunctionAnnot
  */
 public class NPFunctionValidator implements AnalysisTask<SyntaxNodeAnalysisContext> {
     private static final String PROMPT_TYPE = "Prompt";
-    private static final String MODEL_TYPE = "Model";
+    private static final String CONTEXT_TYPE = "Context";
 
     private final CodeModifier.AnalysisData analysisData;
 
@@ -88,11 +88,11 @@ public class NPFunctionValidator implements AnalysisTask<SyntaxNodeAnalysisConte
                                         String.format("%s:%s", MODULE_NAME, PROMPT_TYPE)))
                 .findFirst()
                 .get()).typeDescriptor();
-        TypeSymbol modelType = ((TypeDefinitionSymbol) npModuleSymbol.allSymbols().stream()
+        TypeSymbol contextType = ((TypeDefinitionSymbol) npModuleSymbol.allSymbols().stream()
                 .filter(
                         symbol -> symbol instanceof TypeDefinitionSymbol typeDefinitionSymbol &&
                                 typeDefinitionSymbol.moduleQualifiedName().equals(
-                                        String.format("%s:%s", MODULE_NAME, MODEL_TYPE)))
+                                        String.format("%s:%s", MODULE_NAME, CONTEXT_TYPE)))
                 .findFirst()
                 .get()).typeDescriptor();
 
@@ -100,7 +100,7 @@ public class NPFunctionValidator implements AnalysisTask<SyntaxNodeAnalysisConte
         for (ModuleMemberDeclarationNode member : rootNode.members()) {
             if (member instanceof FunctionDefinitionNode functionDefinitionNode) {
                 validatedFunctionParamsAndReturnType(semanticModel, functionDefinitionNode, errorType, jsonType, ctx,
-                        npModulePrefixStr, promptType, modelType);
+                        npModulePrefixStr, promptType, contextType);
             }
         }
     }
@@ -110,20 +110,20 @@ public class NPFunctionValidator implements AnalysisTask<SyntaxNodeAnalysisConte
                                                       TypeSymbol errorType,
                                                       TypeSymbol jsonType, SyntaxNodeAnalysisContext ctx,
                                                       String npModulePrefix, TypeSymbol promptType,
-                                                      TypeSymbol modelType) {
+                                                      TypeSymbol contextType) {
         if (!(functionDefinitionNode.functionBody() instanceof ExternalFunctionBodyNode externalFunctionBodyNode) ||
                 !hasNaturalFunctionAnnotation(externalFunctionBodyNode, npModulePrefix)) {
             return;
         }
 
         FunctionSignatureNode functionSignatureNode = functionDefinitionNode.functionSignature();
-        validateParameters(semanticModel, functionDefinitionNode, ctx, promptType, modelType, functionSignatureNode);
+        validateParameters(semanticModel, functionDefinitionNode, ctx, promptType, contextType, functionSignatureNode);
         validateReturnType(semanticModel, functionSignatureNode.returnTypeDesc(), errorType, jsonType, ctx,
                 functionDefinitionNode.location());
     }
 
     private void validateParameters(SemanticModel semanticModel, FunctionDefinitionNode functionDefinitionNode,
-                                    SyntaxNodeAnalysisContext ctx, TypeSymbol promptType, TypeSymbol modelType,
+                                    SyntaxNodeAnalysisContext ctx, TypeSymbol promptType, TypeSymbol contextType,
                                     FunctionSignatureNode functionSignatureNode) {
         boolean hasPromptParam = false;
 
@@ -138,10 +138,10 @@ public class NPFunctionValidator implements AnalysisTask<SyntaxNodeAnalysisConte
                         DiagnosticCode.TYPE_OF_PROMPT_PARAM_MUST_BE_A_SUBTYPE_OF_NP_PROMPT);
             }
 
-            if (MODEL_VAR.equals(parameterName)) {
-                validateParam(semanticModel, ctx, modelType, parameter, kind,
-                        DiagnosticCode.MODEL_PARAM_MUST_BE_REQUIRED_OR_DEFAULTABLE,
-                        DiagnosticCode.TYPE_OF_MODEL_PARAM_MUST_BE_A_SUBTYPE_OF_NP_MODEL);
+            if (CONTEXT_VAR.equals(parameterName)) {
+                validateParam(semanticModel, ctx, contextType, parameter, kind,
+                        DiagnosticCode.CONTEXT_PARAM_MUST_BE_REQUIRED_OR_DEFAULTABLE,
+                        DiagnosticCode.TYPE_OF_CONTEXT_PARAM_MUST_BE_A_SUBTYPE_OF_NP_CONTEXT);
             }
         }
 

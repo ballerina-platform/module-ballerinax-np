@@ -32,18 +32,16 @@ public type Prompt object {
     public anydata[] insertions;
 };
 
-# Calls a Large Language Model (LLM) with a given prompt and model and returns 
+# Calls a Large Language Model (LLM) with a given prompt and context and returns 
 # the response parsed as the expected type.
 #
 # + prompt - The prompt to send to the LLM
-# + model - The LLM model to use (defaults to the default model configured via the configurable 
-# variable `defaultModelConfig`) 
+# + context - The context to use, including the LLM to use
 # + td - The expected return type, which is also used as the schema for the response expected 
 # from the LLM
 # + return - The LLM response parsed according to the specified type, or an error if the call 
 # fails or parsing fails
-public isolated function callLlm(Prompt prompt, Model model = getDefaultModel(),
-        typedesc<json> td = <>)
+public isolated function callLlm(Prompt prompt, Context context = {}, typedesc<json> td = <>)
         returns td|error = @java:Method {
     name: "callLlmCallBallerinaFunction",
     'class: "io.ballerina.lib.np.Native"
@@ -52,10 +50,17 @@ public isolated function callLlm(Prompt prompt, Model model = getDefaultModel(),
 # Annotation to indicate that the implementation of a function should be
 # a call to an LLM with the prompt specified as a parameter and using the 
 # return type as the schema for the expected response.
-# If function has a `model` parameter, it will be used as the model to call.
+# If function has a `context` parameter, the model specified in the 
+# context will be used as the model to call.
 # If not, defaults to the default model configured via the configurable 
 # variable `defaultModelConfig`
 public const annotation NaturalFunction on source external;
+
+# Context for Large Language Model (LLM) usage.
+public type Context record {|
+    # The model to use
+    Model model = getDefaultModel();
+|};
 
 # Abstraction for a Large Language Model (LLM), with chat/completion functionality.
 public type Model distinct isolated client object {

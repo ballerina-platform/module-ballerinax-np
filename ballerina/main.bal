@@ -87,7 +87,8 @@ isolated function buildPromptString(Prompt prompt, typedesc<json> td) returns st
         ${schema}`;
 }
 
-isolated function callLlmBal(Prompt prompt, Model model, typedesc<json> td) returns json|error {
+isolated function callLlmBal(Prompt prompt, Context context, typedesc<json> td) returns json|error {
+    Model model = context.model;
     string resp = check model->call(prompt, td);
     return parseResponse(resp, td);
 }

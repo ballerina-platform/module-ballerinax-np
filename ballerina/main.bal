@@ -87,11 +87,11 @@ isolated function getPromptWithExpectedResponseSchema(string prompt, map<json> e
         Schema:
         ${expectedResponseSchema.toJsonString()}`;
 
-isolated function callLlmBal(Prompt prompt, Context context, typedesc<json> td) returns json|error {
+isolated function callLlmGeneric(Prompt prompt, Context context, typedesc<json> targetType) returns json|error {
     Model model = context.model;
     json resp = 
-        check model->call(buildPromptString(prompt), generateJsonSchemaForTypedescAsJson(td));
-    return parseResponseAsType(resp, td);
+        check model->call(buildPromptString(prompt), generateJsonSchemaForTypedescAsJson(targetType));
+    return parseResponseAsType(resp, targetType);
 }
 
 isolated function parseResponseAsJson(string resp) returns json|error {
@@ -99,5 +99,5 @@ isolated function parseResponseAsJson(string resp) returns json|error {
     return processedResponse.fromJsonString();
 }
 
-isolated function parseResponseAsType(json resp, typedesc<json> td) returns json|error =>
-    resp.fromJsonWithType(td);
+isolated function parseResponseAsType(json resp, typedesc<json> targetType) returns json|error =>
+    resp.fromJsonWithType(targetType);

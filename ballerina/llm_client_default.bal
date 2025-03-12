@@ -47,7 +47,16 @@ public isolated distinct client class DefaultBallerinaAzureOpenAIModel {
         };
 
         http:Client cl = self.cl;
-        chat:CreateChatCompletionResponse chatResult = check cl->/chat/complete.post(chatBody);
+        http:Response chatResponse = check cl->/chat/complete.post(chatBody);
+        if (chatResponse.statusCode == 401 || chatResponse.statusCode == 403) {
+            return error("Token expired, Please generate a new token using Ballerina copilot");
+        }
+
+        if (!(chatResponse.statusCode >= 200 && chatResponse.statusCode < 300)) {
+            return error(string `Something went wrong while calling the Azure OpenAI client: ${(check chatResponse.getJsonPayload()).toString()}`);
+        }
+
+        chat:CreateChatCompletionResponse chatResult = check (check chatResponse.getJsonPayload()).cloneWithType();
         record {
             chat:ChatCompletionResponseMessage message?;
             chat:ContentFilterChoiceResults content_filter_results?;

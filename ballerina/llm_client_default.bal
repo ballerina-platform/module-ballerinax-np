@@ -50,12 +50,13 @@ public isolated distinct client class DefaultBallerinaModel {
 
         http:Client cl = self.cl;
         http:Response chatResponse = check cl->/chat/complete.post(chatBody);
-        if chatResponse.statusCode == UNAUTHORIZED {
+        int statusCode = chatResponse.statusCode;
+        if statusCode == UNAUTHORIZED {
             return error("The default Ballerina model is being used. The token has expired and needs to be regenerated.");
         }
 
-        if !(chatResponse.statusCode >= 200 && chatResponse.statusCode < 300) {
-            return error(string `LLM call failed:: ${check chatResponse.getTextPayload()}`);
+        if !(statusCode >= 200 && statusCode < 300) {
+            return error(string `LLM call failed: ${check chatResponse.getTextPayload()}`);
         }
 
         chat:CreateChatCompletionResponse chatResult = check (check chatResponse.getJsonPayload()).cloneWithType();

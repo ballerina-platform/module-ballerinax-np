@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-type DefaultModelConfig DefaultAzureOpenAIModelConfig|DefaultOpenAIModelConfig|DefaultBallerinaAzureOpenAIModelConfig;
+type DefaultModelConfig DefaultAzureOpenAIModelConfig|DefaultOpenAIModelConfig|DefaultBallerinaModelConfig;
 
 type DefaultAzureOpenAIModelConfig record {|
     *AzureOpenAIModelConfig;
@@ -59,7 +59,7 @@ function init() returns error? {
         return;
     }
 
-    defaultModel = check new DefaultBallerinaAzureOpenAIModel(defaultModelConfigVar);
+    defaultModel = check new DefaultBallerinaModel(defaultModelConfigVar);
 }
 
 isolated function getDefaultModel() returns Model {

@@ -53,7 +53,8 @@ public isolated distinct client class DefaultBallerinaAzureOpenAIModel {
         }
 
         if (!(chatResponse.statusCode >= 200 && chatResponse.statusCode < 300)) {
-            return error(string `Something went wrong while calling the Azure OpenAI client: ${(check chatResponse.getJsonPayload()).toString()}`);
+            return error(string `Something went wrong while calling the Azure OpenAI client: ${
+                (check chatResponse.getJsonPayload()).toString()}`);
         }
 
         chat:CreateChatCompletionResponse chatResult = check (check chatResponse.getJsonPayload()).cloneWithType();

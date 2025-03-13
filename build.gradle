@@ -75,6 +75,15 @@ release {
     // }
 }
 
+subprojects {
+    configurations {
+        // Temporary workaround: This configuration is not required but is added 
+        // to prevent the Gradle plugin from failing due to its absence.
+        // https://github.com/ballerina-platform/ballerina-library/issues/7628
+        ballerinaStdLibs
+    }
+}
+
 task build {
     dependsOn('np-ballerina:build')
 }

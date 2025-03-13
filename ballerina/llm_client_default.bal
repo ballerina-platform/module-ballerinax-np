@@ -15,7 +15,6 @@
 // under the License.
 
 import ballerina/http;
-import ballerinax/azure.openai.chat;
 
 const UNAUTHORIZED = 401;
 
@@ -27,11 +26,8 @@ public type DefaultBallerinaModelConfig record {|
     string accessToken;
 |};
 
-type ChatCompletionChoice record {
-    chat:ChatCompletionResponseMessage message?;
-    chat:ContentFilterChoiceResults content_filter_results?;
-    int index?;
-    string finish_reason?;
+type ChatCompletionResponse record {
+    string[] content?;
 };
 
 # Default Ballerina model chat completion client.
@@ -63,19 +59,11 @@ public isolated distinct client class DefaultBallerinaModel {
             return error(string `LLM call failed: ${check chatResponse.getTextPayload()}`);
         }
 
-        ChatCompletionChoice[]?|error choices = check (check chatResponse.getJsonPayload()).cloneWithType();
-        if choices is error {
-            return error("Failed to retrieve completion message", choices);
+        ChatCompletionResponse chatCompleteResponse = check (check chatResponse.getJsonPayload()).cloneWithType();
+        string[]? content = chatCompleteResponse?.content;
+        if content is () {
+            return error("No completion message");
         }
-        
-        if choices is () {
-            return {body: "No completion choices"};
-        }
-
-        string? resp = choices[0].message?.content;
-        if resp is () {
-            return {body: "No completion message"};
-        }
-        return parseResponseAsJson(resp);
+        return parseResponseAsJson(content[0]);
     }
 }

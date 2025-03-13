@@ -442,17 +442,16 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
             case TypeReferenceTypeSymbol typeReference ->
                     typeSchemas.put(typeReference.definition().getName().get(),
                             getJsonSchema(typeMapper.getSchema(typeReference)));
-
             case ArrayTypeSymbol arrayType ->
-                    getTypeSchema(arrayType.memberTypeDescriptor(), typeMapper, typeSchemas);
-
+                            getTypeSchema(arrayType.memberTypeDescriptor(), typeMapper, typeSchemas);
             case TupleTypeSymbol tupleType ->
                     tupleType.members().forEach(member ->
                             getTypeSchema(member.typeDescriptor(), typeMapper, typeSchemas));
-
             case RecordTypeSymbol recordType ->
                     recordType.fieldDescriptors().values().forEach(field ->
                             getTypeSchema(field.typeDescriptor(), typeMapper, typeSchemas));
+            case UnionTypeSymbol unionTypeSymbol -> unionTypeSymbol.memberTypeDescriptors().forEach(member ->
+                            getTypeSchema(member, typeMapper, typeSchemas));
             default -> { }
         }
     }

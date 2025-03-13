@@ -3,4 +3,4 @@ id = "np-compiler-plugin"
 class = "io.ballerina.lib.np.compilerplugin.CompilerPlugin"
 
 [[dependency]]
-path = "../compiler-plugin/build/libs/np-compiler-plugin-0.1.3-SNAPSHOT.jar"
+path = "../compiler-plugin/build/libs/np-compiler-plugin-0.1.4-SNAPSHOT.jar"

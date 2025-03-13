@@ -17,21 +17,23 @@
 import ballerina/http;
 import ballerinax/azure.openai.chat;
 
-# Configuration for the default Azure OpenAI model.
-public type DefaultBallerinaAzureOpenAIModelConfig record {|
+const UNAUTHORIZED = 401;
+
+# Configuration for the default Ballerina model.
+public type DefaultBallerinaModelConfig record {|
     # LLM service URL
     string url;
     # Access token
     string accessToken;
 |};
 
-# Default Azure OpenAI model chat completion client.
-public isolated distinct client class DefaultBallerinaAzureOpenAIModel {
+# Default Ballerina model chat completion client.
+public isolated distinct client class DefaultBallerinaModel {
     *Model;
 
     private final http:Client cl;
 
-    public isolated function init(DefaultBallerinaAzureOpenAIModelConfig config) returns error? {
+    public isolated function init(DefaultBallerinaModelConfig config) returns error? {
         var {url, accessToken} = config;
 
         self.cl = check new (url, {
@@ -47,7 +49,17 @@ public isolated distinct client class DefaultBallerinaAzureOpenAIModel {
         };
 
         http:Client cl = self.cl;
-        chat:CreateChatCompletionResponse chatResult = check cl->/chat/complete.post(chatBody);
+        http:Response chatResponse = check cl->/chat/complete.post(chatBody);
+        int statusCode = chatResponse.statusCode;
+        if statusCode == UNAUTHORIZED {
+            return error("The default Ballerina model is being used. The token has expired and needs to be regenerated.");
+        }
+
+        if !(statusCode >= 200 && statusCode < 300) {
+            return error(string `LLM call failed: ${check chatResponse.getTextPayload()}`);
+        }
+
+        chat:CreateChatCompletionResponse chatResult = check (check chatResponse.getJsonPayload()).cloneWithType();
         record {
             chat:ChatCompletionResponseMessage message?;
             chat:ContentFilterChoiceResults content_filter_results?;

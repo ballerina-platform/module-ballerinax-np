@@ -18,4 +18,4 @@ observabilityIncluded = true
 groupId = "io.ballerina.lib"
 artifactId = "np-native"
 version = "0.1.4"
-path = "../native/build/libs/np-native-0.1.4-SNAPSHOT.jar"
+path = "../native/build/libs/np-native-0.1.4.jar"

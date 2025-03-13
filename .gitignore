@@ -52,5 +52,5 @@ velocity.log*
 *Ballerina.lock
 Config.toml
 
-# ignore ballerina installer in github runner
+# Ignore the Ballerina installer in the GitHub runner
 *.deb

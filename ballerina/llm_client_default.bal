@@ -26,6 +26,10 @@ public type DefaultBallerinaModelConfig record {|
     string accessToken;
 |};
 
+type ChatCompletionResponse record {
+    string[] content?;
+};
+
 # Default Ballerina model chat completion client.
 public isolated distinct client class DefaultBallerinaModel {
     *Model;
@@ -55,10 +59,11 @@ public isolated distinct client class DefaultBallerinaModel {
             return error(string `LLM call failed: ${check chatResponse.getTextPayload()}`);
         }
 
-        string|error resp = check chatResponse.getTextPayload();
-        if resp is error {
-            return error("Failed to retrieve completion message", resp);
+        ChatCompletionResponse chatCompleteResponse = check (check chatResponse.getJsonPayload()).cloneWithType();
+        string[]? content = chatCompleteResponse?.content;
+        if content is () {
+            return error("No completion message");
         }
-        return parseResponseAsJson(resp);
+        return parseResponseAsJson(content[0]);
     }
 }

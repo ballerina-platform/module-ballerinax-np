@@ -72,7 +72,7 @@ public class NPFunctionValidator implements AnalysisTask<SyntaxNodeAnalysisConte
     public void perform(SyntaxNodeAnalysisContext ctx) {
         SemanticModel semanticModel = ctx.semanticModel();
         TypeSymbol errorType = semanticModel.types().ERROR;
-        TypeSymbol jsonType = semanticModel.types().JSON;
+        TypeSymbol anydataType = semanticModel.types().ANYDATA;
         ModulePartNode rootNode = (ModulePartNode) ctx.node();
         Optional<ModuleSymbol> npModule = findNPModule(semanticModel, rootNode);
         if (npModule.isEmpty()) {
@@ -99,7 +99,7 @@ public class NPFunctionValidator implements AnalysisTask<SyntaxNodeAnalysisConte
         String npModulePrefixStr = npModuleSymbol.id().modulePrefix();
         for (ModuleMemberDeclarationNode member : rootNode.members()) {
             if (member instanceof FunctionDefinitionNode functionDefinitionNode) {
-                validatedFunctionParamsAndReturnType(semanticModel, functionDefinitionNode, errorType, jsonType, ctx,
+                validatedFunctionParamsAndReturnType(semanticModel, functionDefinitionNode, errorType, anydataType, ctx,
                         npModulePrefixStr, promptType, contextType);
             }
         }
@@ -108,7 +108,7 @@ public class NPFunctionValidator implements AnalysisTask<SyntaxNodeAnalysisConte
     private void validatedFunctionParamsAndReturnType(SemanticModel semanticModel,
                                                       FunctionDefinitionNode functionDefinitionNode,
                                                       TypeSymbol errorType,
-                                                      TypeSymbol jsonType, SyntaxNodeAnalysisContext ctx,
+                                                      TypeSymbol anydataType, SyntaxNodeAnalysisContext ctx,
                                                       String npModulePrefix, TypeSymbol promptType,
                                                       TypeSymbol contextType) {
         if (!(functionDefinitionNode.functionBody() instanceof ExternalFunctionBodyNode externalFunctionBodyNode) ||
@@ -118,7 +118,7 @@ public class NPFunctionValidator implements AnalysisTask<SyntaxNodeAnalysisConte
 
         FunctionSignatureNode functionSignatureNode = functionDefinitionNode.functionSignature();
         validateParameters(semanticModel, functionDefinitionNode, ctx, promptType, contextType, functionSignatureNode);
-        validateReturnType(semanticModel, functionSignatureNode.returnTypeDesc(), errorType, jsonType, ctx,
+        validateReturnType(semanticModel, functionSignatureNode.returnTypeDesc(), errorType, anydataType, ctx,
                 functionDefinitionNode.location());
     }
 
@@ -195,7 +195,7 @@ public class NPFunctionValidator implements AnalysisTask<SyntaxNodeAnalysisConte
     private void validateReturnType(SemanticModel semanticModel,
                                     Optional<ReturnTypeDescriptorNode> returnTypeDescriptorNode,
                                     TypeSymbol errorType,
-                                    TypeSymbol jsonType,
+                                    TypeSymbol anydataType,
                                     SyntaxNodeAnalysisContext ctx, NodeLocation functionDefLocation) {
         Location location = functionDefLocation;
         if (returnTypeDescriptorNode.isEmpty()) {
@@ -223,7 +223,7 @@ public class NPFunctionValidator implements AnalysisTask<SyntaxNodeAnalysisConte
         }
 
         if (!(returnTypeSymbol instanceof UnionTypeSymbol unionTypeSymbol)) {
-            if (returnTypeSymbol.typeKind() != TypeDescKind.ERROR && returnTypeSymbol.subtypeOf(jsonType)) {
+            if (returnTypeSymbol.typeKind() != TypeDescKind.ERROR && returnTypeSymbol.subtypeOf(anydataType)) {
                 reportDiagnostic(ctx, location, DiagnosticCode.NON_ERROR_RETURN_TYPE_MUST_BE_A_SUBTYPE_OF_JSON);
             }
             return;
@@ -234,7 +234,7 @@ public class NPFunctionValidator implements AnalysisTask<SyntaxNodeAnalysisConte
                 memberTypeDescriptor = typeReferenceTypeSymbol.typeDescriptor();
             }
 
-            if (memberTypeDescriptor.typeKind() != TypeDescKind.ERROR && !memberTypeDescriptor.subtypeOf(jsonType)) {
+            if (memberTypeDescriptor.typeKind() != TypeDescKind.ERROR && !memberTypeDescriptor.subtypeOf(anydataType)) {
                 reportDiagnostic(ctx, location, DiagnosticCode.NON_ERROR_RETURN_TYPE_MUST_BE_A_SUBTYPE_OF_JSON);
             }
         }

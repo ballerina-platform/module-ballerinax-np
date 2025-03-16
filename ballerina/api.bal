@@ -41,7 +41,7 @@ public type Prompt object {
 #  is generated to inlcude in the request to the LLM
 # + return - The LLM response parsed according to the specified type, or an error if the call 
 # fails or parsing fails
-public isolated function callLlm(Prompt prompt, Context context = {}, typedesc<json> targetType = <>)
+public isolated function callLlm(Prompt prompt, Context context = {}, typedesc<anydata> targetType = <>)
         returns targetType|error = @java:Method {
     'class: "io.ballerina.lib.np.Native"
 } external;

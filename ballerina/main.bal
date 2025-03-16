@@ -87,7 +87,7 @@ isolated function getPromptWithExpectedResponseSchema(string prompt, map<json> e
         Schema:
         ${expectedResponseSchema.toJsonString()}`;
 
-isolated function callLlmGeneric(Prompt prompt, Context context, typedesc<json> targetType) returns json|error {
+isolated function callLlmGeneric(Prompt prompt, Context context, typedesc<anydata> targetType) returns json|error {
     Model model = context.model;
     json resp = 
         check model->call(buildPromptString(prompt), generateJsonSchemaForTypedescAsJson(targetType));

@@ -47,8 +47,11 @@ public isolated distinct client class OpenAIModel {
             model: self.model
         };
 
-        openAIChat:CreateChatCompletionResponse chatResult =
-            check self.cl->/chat/completions.post(chatBody);
+        openAIChat:CreateChatCompletionResponse|error chatResult = self.cl->/chat/completions.post(chatBody);
+        if (chatResult is error) {
+            return handleClientError(chatResult);
+        }
+
         openAIChat:CreateChatCompletionResponse_choices[] choices = chatResult.choices;
 
         string? resp = choices[0].message?.content;

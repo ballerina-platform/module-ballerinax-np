@@ -48,8 +48,12 @@ public isolated distinct client class AzureOpenAIModel {
         };
 
         chat:Client cl = self.cl;
-        chat:CreateChatCompletionResponse chatResult =
-            check cl->/deployments/[self.deploymentId]/chat/completions.post(self.apiVersion, chatBody);
+        chat:CreateChatCompletionResponse|error chatResult =
+            cl->/deployments/[self.deploymentId]/chat/completions.post(self.apiVersion, chatBody);
+        if (chatResult is error) {
+            return handleClientError(chatResult);
+        }
+        
         record {
             chat:ChatCompletionResponseMessage message?;
             chat:ContentFilterChoiceResults content_filter_results?;

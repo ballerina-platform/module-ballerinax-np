@@ -142,6 +142,12 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
 
             for (DocumentId documentId: module.testDocumentIds()) {
                 Document document = module.document(documentId);
+                processImportDeclarations(document, modifierData);
+                processExternalFunctions(document, module, modifierData, modifierContext);
+            }
+
+            for (DocumentId documentId: module.testDocumentIds()) {
+                Document document = module.document(documentId);
                 modifierContext.modifyTestSourceFile(modifyDocument(document, modifierData, modifierContext, moduleId),
                                                      documentId);
             }

@@ -46,10 +46,15 @@ import static io.ballerina.runtime.api.creators.ValueCreator.createMapValue;
  * @since 0.3.0
  */
 public class Native {
+
+    static Boolean isSchemaGeneratedAtCompileTime;
+
     public static Object callLlm(Environment env, BObject prompt, BMap context, BTypedesc targetType) {
+        isSchemaGeneratedAtCompileTime = true;
+        Object jsonSchema = generateJsonSchemaForType(targetType.getDescribingType());
         return env.getRuntime().callFunction(
                 new Module("ballerinax", "np", "0"), "callLlmGeneric", null, prompt, context, targetType,
-                generateJsonSchemaForType(targetType.getDescribingType()));
+                isSchemaGeneratedAtCompileTime ? jsonSchema : null);
     }
 
     public static Object generateJsonSchemaForType(Type td) {
@@ -114,6 +119,7 @@ public class Native {
                 return entry.getValue();
             }
         }
+        isSchemaGeneratedAtCompileTime = false;
         return null;
     }
 

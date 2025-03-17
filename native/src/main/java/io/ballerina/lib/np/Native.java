@@ -22,6 +22,7 @@ import io.ballerina.runtime.api.creators.ValueCreator;
 import io.ballerina.runtime.api.flags.SymbolFlags;
 import io.ballerina.runtime.api.types.ArrayType;
 import io.ballerina.runtime.api.types.Field;
+import io.ballerina.runtime.api.types.JsonType;
 import io.ballerina.runtime.api.types.PredefinedTypes;
 import io.ballerina.runtime.api.types.RecordType;
 import io.ballerina.runtime.api.types.TupleType;
@@ -65,6 +66,7 @@ public class Native {
 
         return switch (type) {
             case RecordType recordType -> generateJsonSchemaForRecordType(recordType);
+            case JsonType ignored -> generateJsonSchemaForJson();
             case ArrayType arrayType -> generateJsonSchemaForArrayType(arrayType);
             case TupleType tupleType -> generateJsonSchemaForTupleType(tupleType);
             case UnionType unionType -> generateJsonSchemaForUnionType(unionType);
@@ -75,6 +77,19 @@ public class Native {
     private static BMap<BString, Object> createSimpleTypeSchema(Type type) {
         BMap<BString, Object> schemaMap = createMapValue(TypeCreator.createMapType(PredefinedTypes.TYPE_JSON));
         schemaMap.put(StringUtils.fromString("type"), StringUtils.fromString(getStringRepresentation(type)));
+        return schemaMap;
+    }
+
+    private static BMap<BString, Object> generateJsonSchemaForJson() {
+        BString[] bStringValues = new BString[6];
+        bStringValues[0] = StringUtils.fromString("object");
+        bStringValues[1] = StringUtils.fromString("array");
+        bStringValues[2] = StringUtils.fromString("string");
+        bStringValues[3] = StringUtils.fromString("number");
+        bStringValues[4] = StringUtils.fromString("boolean");
+        bStringValues[5] = StringUtils.fromString("null");
+        BMap<BString, Object> schemaMap = createMapValue(TypeCreator.createMapType(PredefinedTypes.TYPE_JSON));
+        schemaMap.put(StringUtils.fromString("type"), ValueCreator.createArrayValue(bStringValues));
         return schemaMap;
     }
 

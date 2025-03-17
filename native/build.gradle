@@ -30,8 +30,8 @@ dependencies {
     checkstyle "com.puppycrawl.tools:checkstyle:${puppycrawlCheckstyleVersion}"
     implementation 'org.apache.commons:commons-lang3:3.6'
 
-    implementation group: 'org.ballerinalang', name: 'ballerina-lang', version: "${ballerinaLangTimestampedVersion}"
-    implementation group: 'org.ballerinalang', name: 'ballerina-runtime', version: "${ballerinaLangTimestampedVersion}"
+    implementation group: 'org.ballerinalang', name: 'ballerina-lang', version: "${ballerinaLangVersion}"
+    implementation group: 'org.ballerinalang', name: 'ballerina-runtime', version: "${ballerinaLangVersion}"
 }
 
 checkstyle {

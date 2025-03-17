@@ -39,11 +39,10 @@ public isolated function reviewBlog(
         - **Originality**: Whether the content introduces fresh perspectives or ideas.
         - **Language Quality**: Grammar, spelling, and overall writing quality.
 
-        Here is the blog post content and submitted category:
+        Here is the blog post content:
 
-        **Blog Post Content:**
-        ${blog.title}
-        ${blog.content}`) returns Review|error = @np:NaturalFunction external;
+        Title: ${blog.title}
+        Content: ${blog.content}`) returns Review|error = @np:NaturalFunction external;
 ```
 
 Note how the prompt refers to preceding parameters. These functions, thus, become a type-safe approach to share and reuse prompts.
@@ -81,9 +80,10 @@ The model to use can be set either by configuration or by introducing a `context
 
             ...
 
-            **Blog Post Content:**
-            ${blog.title}
-            ${blog.content}`) returns Review|error = @np:NaturalFunction external;
+            Here is the blog post content:
+
+            Title: ${blog.title}
+            Content: ${blog.content}`) returns Review|error = @np:NaturalFunction external;
     ```
 
 
@@ -120,7 +120,8 @@ Review review = check np:callLlm(`You are an expert content reviewer for a blog 
 
             ...
 
-            **Blog Post Content:**
-            ${blog.title}
-            ${blog.content}`, {model: azureOpenAIModel});
+            Here is the blog post content:
+
+            Title: ${blog.title}
+            Content: ${blog.content}`, {model: azureOpenAIModel});
 ```

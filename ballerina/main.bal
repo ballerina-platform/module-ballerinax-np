@@ -14,7 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-type DefaultModelConfig DefaultAzureOpenAIModelConfig|DefaultOpenAIModelConfig|DefaultBallerinaAzureOpenAIModelConfig;
+const JSON_CONVERSION_ERROR = "FromJsonStringError";
+const CONVERSION_ERROR = "ConversionError";
+const ERROR_MESSAGE = "Error occurred while converting the LLM response to the given type. Please refined your prompt to get a better result.";
+
+type DefaultModelConfig DefaultAzureOpenAIModelConfig|DefaultOpenAIModelConfig|DefaultBallerinaModelConfig;
 
 type DefaultAzureOpenAIModelConfig record {|
     *AzureOpenAIModelConfig;
@@ -59,7 +63,7 @@ function init() returns error? {
         return;
     }
 
-    defaultModel = check new DefaultBallerinaAzureOpenAIModel(defaultModelConfigVar);
+    defaultModel = check new DefaultBallerinaModel(defaultModelConfigVar);
 }
 
 isolated function getDefaultModel() returns Model {
@@ -96,8 +100,25 @@ isolated function callLlmGeneric(Prompt prompt, Context context, typedesc<json> 
 
 isolated function parseResponseAsJson(string resp) returns json|error {
     string processedResponse = re `${"```json|```"}`.replaceAll(resp, "");
-    return processedResponse.fromJsonString();
+    json|error result = trap processedResponse.fromJsonString();
+    if result is error {
+        return handlepParseResponseError(result);
+    }
+    return result;
 }
 
-isolated function parseResponseAsType(json resp, typedesc<json> targetType) returns json|error =>
-    resp.fromJsonWithType(targetType);
+isolated function parseResponseAsType(json resp, typedesc<json> targetType) returns json|error {
+    json|error result = trap resp.fromJsonWithType(targetType);
+    if result is error {
+        return handlepParseResponseError(result);
+    }
+    return result;
+}
+
+isolated function handlepParseResponseError(error chatResponseError) returns error {
+    if chatResponseError.message().includes(JSON_CONVERSION_ERROR) 
+            || chatResponseError.message().includes(CONVERSION_ERROR) {
+        return error(string `${ERROR_MESSAGE}`);
+    }
+    return chatResponseError;
+}

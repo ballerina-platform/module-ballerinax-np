@@ -15,23 +15,28 @@
 // under the License.
 
 import ballerina/http;
-import ballerinax/azure.openai.chat;
 
-# Configuration for the default Azure OpenAI model.
-public type DefaultBallerinaAzureOpenAIModelConfig record {|
+const UNAUTHORIZED = 401;
+
+# Configuration for the default Ballerina model.
+public type DefaultBallerinaModelConfig record {|
     # LLM service URL
     string url;
     # Access token
     string accessToken;
 |};
 
-# Default Azure OpenAI model chat completion client.
-public isolated distinct client class DefaultBallerinaAzureOpenAIModel {
+type ChatCompletionResponse record {
+    string[] content?;
+};
+
+# Default Ballerina model chat completion client.
+public isolated distinct client class DefaultBallerinaModel {
     *Model;
 
     private final http:Client cl;
 
-    public isolated function init(DefaultBallerinaAzureOpenAIModelConfig config) returns error? {
+    public isolated function init(DefaultBallerinaModelConfig config) returns error? {
         var {url, accessToken} = config;
 
         self.cl = check new (url, {
@@ -42,27 +47,23 @@ public isolated distinct client class DefaultBallerinaAzureOpenAIModel {
     }
 
     isolated remote function call(string prompt, map<json> expectedResponseSchema) returns json|error {
-        chat:CreateChatCompletionRequest chatBody = {
-            messages: [{role: "user", "content": getPromptWithExpectedResponseSchema(prompt, expectedResponseSchema)}]
-        };
-
         http:Client cl = self.cl;
-        chat:CreateChatCompletionResponse chatResult = check cl->/chat/complete.post(chatBody);
-        record {
-            chat:ChatCompletionResponseMessage message?;
-            chat:ContentFilterChoiceResults content_filter_results?;
-            int index?;
-            string finish_reason?;
-        }[]? choices = chatResult.choices;
-
-        if choices is () {
-            return error("No completion choices");
+        http:Response chatResponse = 
+            check cl->/chat/complete.post(getPromptWithExpectedResponseSchema(prompt, expectedResponseSchema));
+        int statusCode = chatResponse.statusCode;
+        if statusCode == UNAUTHORIZED {
+            return error("The default Ballerina model is being used. The token has expired and needs to be regenerated.");
         }
 
-        string? resp = choices[0].message?.content;
-        if resp is () {
+        if !(statusCode >= 200 && statusCode < 300) {
+            return error(string `LLM call failed: ${check chatResponse.getTextPayload()}`);
+        }
+
+        ChatCompletionResponse chatCompleteResponse = check (check chatResponse.getJsonPayload()).cloneWithType();
+        string[]? content = chatCompleteResponse?.content;
+        if content is () {
             return error("No completion message");
         }
-        return parseResponseAsJson(resp);
+        return parseResponseAsJson(content[0]);
     }
 }

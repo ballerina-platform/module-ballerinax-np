@@ -47,11 +47,10 @@ function testJsonConversionError() {
     test:assertTrue((<error> rating).message().includes(ERROR_MESSAGE));
 }
 
+type Foo record{| string name; |};
 @test:Config
 function testJsonConversionError2() {
-    record{|
-        string name;
-    |}[]|error rating = callLlm(`Tell me name and the age of the top 10 world class cricketers`);
+    Foo[]|error rating = callLlm(`Tell me name and the age of the top 10 world class cricketers`);
     test:assertTrue(rating is error);
     test:assertTrue((<error> rating).message().includes(ERROR_MESSAGE));
 }

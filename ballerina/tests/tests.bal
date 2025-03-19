@@ -16,7 +16,7 @@
 
 import ballerina/test;
 
-const ERROR_MESSAGE = "Error occurred while converting the LLM response to the given type. Please refine your prompt to get a better result.";
+const ERROR_MESSAGE = "Error occurred while converting the LLM response to the given type. This could happen if the response format is unexpected or contains invalid data.";
 
 @test:Config
 function testPromptAsCodeFunctionWithSimpleExpectedTypeWithDefaultAzureOpenAIClient() returns error? {

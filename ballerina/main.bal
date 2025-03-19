@@ -16,7 +16,7 @@
 
 const JSON_CONVERSION_ERROR = "FromJsonStringError";
 const CONVERSION_ERROR = "ConversionError";
-const ERROR_MESSAGE = "Error occurred while converting the LLM response to the given type. Please refine your prompt to get a better result.";
+const ERROR_MESSAGE = "Error occurred while converting the LLM response to the given type. This could happen if the response format is unexpected or contains invalid data.";
 
 type DefaultModelConfig DefaultAzureOpenAIModelConfig|DefaultOpenAIModelConfig|DefaultBallerinaModelConfig;
 
@@ -119,7 +119,7 @@ isolated function parseResponseAsType(json resp, typedesc<json> targetType) retu
 isolated function handlepParseResponseError(error chatResponseError) returns error {
     if chatResponseError.message().includes(JSON_CONVERSION_ERROR) 
             || chatResponseError.message().includes(CONVERSION_ERROR) {
-        return error(string `${ERROR_MESSAGE}`);
+        return error(string `${ERROR_MESSAGE}`, detail = chatResponseError);
     }
     return chatResponseError;
 }

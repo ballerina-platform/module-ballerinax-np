@@ -16,7 +16,7 @@
 
 const JSON_CONVERSION_ERROR = "FromJsonStringError";
 const CONVERSION_ERROR = "ConversionError";
-const ERROR_MESSAGE = "Error occurred while converting the LLM response to the given type. Please refined your prompt to get a better result.";
+const ERROR_MESSAGE = "Error occurred while converting the LLM response to the given type. Please refine your prompt to get a better result.";
 
 type DefaultModelConfig DefaultAzureOpenAIModelConfig|DefaultOpenAIModelConfig|DefaultBallerinaModelConfig;
 

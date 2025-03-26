@@ -24,6 +24,9 @@ public type OpenAIModelConfig record {|
     string serviceUrl?;
 |};
 
+type OpenAIResponseFormat openAIChat:ResponseFormatText
+            |openAIChat:ResponseFormatJsonObject|openAIChat:ResponseFormatJsonSchema;
+
 # OpenAI model chat completion client.
 public isolated distinct client class OpenAIModel {
     *Model;
@@ -42,9 +45,11 @@ public isolated distinct client class OpenAIModel {
     }
 
     isolated remote function call(string prompt, map<json> expectedResponseSchema) returns json|error {
+        OpenAIResponseFormat responseFormat = check getJsonSchemaResponseTypeForOpenAI(expectedResponseSchema);
         openAIChat:CreateChatCompletionRequest chatBody = {
             messages: [{role: "user", "content": getPromptWithExpectedResponseSchema(prompt, expectedResponseSchema)}],
-            model: self.model
+            model: self.model,
+            response_format: responseFormat
         };
 
         openAIChat:CreateChatCompletionResponse chatResult =
@@ -57,4 +62,8 @@ public isolated distinct client class OpenAIModel {
         }
         return parseResponseAsJson(resp);
     }
+}
+
+isolated function getJsonSchemaResponseTypeForOpenAI(map<json> schema) returns OpenAIResponseFormat|error {
+    return check getJsonSchemaResponseTypeForModel(schema).cloneWithType();
 }

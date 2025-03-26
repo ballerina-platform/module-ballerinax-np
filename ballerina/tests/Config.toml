@@ -2,4 +2,4 @@
 serviceUrl = "http://localhost:8080/llm/azureopenai"
 deploymentId = "gpt4onew"
 apiVersion = "2023-08-01-preview"
-connectionConfig.auth.apiKey = "not-a-real-api-key"
+connectionConfig.auth.api-key = "not-a-real-api-key"

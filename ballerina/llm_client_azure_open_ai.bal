@@ -24,6 +24,9 @@ public type AzureOpenAIModelConfig record {|
     string serviceUrl;
 |};
 
+type AzureOpenAIResponseFormat chat:ResponseFormatText
+            |chat:ResponseFormatJsonObject|chat:ResponseFormatJsonSchema;
+
 # Azure OpenAI model chat completion client.
 public isolated distinct client class AzureOpenAIModel {
     *Model;
@@ -43,23 +46,23 @@ public isolated distinct client class AzureOpenAIModel {
     }
 
     isolated remote function call(string prompt, map<json> expectedResponseSchema) returns json|error {
+        AzureOpenAIResponseFormat responseFormat = check getJsonSchemaResponseTypeForAzureOpenAI(expectedResponseSchema);
         chat:CreateChatCompletionRequest chatBody = {
-            messages: [{role: "user", "content": getPromptWithExpectedResponseSchema(prompt, expectedResponseSchema)}]
+            messages: [{role: "user", "content": getPromptWithExpectedResponseSchema(prompt, expectedResponseSchema)}],
+            response_format: responseFormat
         };
 
         chat:Client cl = self.cl;
-        chat:CreateChatCompletionResponse chatResult =
-            check cl->/deployments/[self.deploymentId]/chat/completions.post(self.apiVersion, chatBody);
-        record {
-            chat:ChatCompletionResponseMessage message?;
-            chat:ContentFilterChoiceResults content_filter_results?;
-            int index?;
-            string finish_reason?;
-        }[]? choices = chatResult.choices;
-
-        if choices is () {
-            return error("No completion choices");
+        chat:inline_response_200_1 chatResult =
+            check cl->/deployments/[self.deploymentId]/chat/completions.post(chatBody, {}, api\-version = self.apiVersion);
+        
+        if chatResult is chat:createChatCompletionStreamResponse {
+            return error("Invalid completion choices");
         }
+
+        chat:CreateChatCompletionResponse chatCompletionResponse = <chat:CreateChatCompletionResponse>chatResult;
+
+        chat:CreateChatCompletionResponse_choices[] choices = chatCompletionResponse.choices;
 
         string? resp = choices[0].message?.content;
         if resp is () {
@@ -67,4 +70,8 @@ public isolated distinct client class AzureOpenAIModel {
         }
         return parseResponseAsJson(resp);
     }
+}
+
+isolated function getJsonSchemaResponseTypeForAzureOpenAI(map<json> schema) returns AzureOpenAIResponseFormat|error {
+    return check getJsonSchemaResponseTypeForModel(schema).cloneWithType();
 }

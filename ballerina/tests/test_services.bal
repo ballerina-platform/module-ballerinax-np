@@ -35,7 +35,7 @@ service /llm on new http:Listener(8080) {
     resource function post openai/chat/completions(openAIChat:CreateChatCompletionRequest payload)
             returns json|error {
 
-        azureOpenAIChat:ChatCompletionRequestMessage message = payload.messages[0];
+        openAIChat:ChatCompletionRequestMessage message = payload.messages[0];
         anydata content = message["content"];
         string contentStr = content.toString();
         test:assertEquals(message.role, "user");

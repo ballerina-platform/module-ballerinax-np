@@ -1,7 +1,7 @@
 [package]
 org = "ballerinax"
 name = "np"
-version = "0.8.1"
+version = "0.8.2"
 authors = ["Ballerina"]
 keywords = ["natural programming", "ai"]
 repository = "https://github.com/ballerina-platform/module-ballerinax-np"
@@ -17,5 +17,5 @@ observabilityIncluded = true
 [[platform.java21.dependency]]
 groupId = "io.ballerina.lib"
 artifactId = "np-native"
-version = "0.8.1"
-path = "../native/build/libs/np-native-0.8.1.jar"
+version = "0.8.2"
+path = "../native/build/libs/np-native-0.8.2-SNAPSHOT.jar"

@@ -133,3 +133,22 @@ isolated function handlepParseResponseError(error chatResponseError) returns err
     }
     return chatResponseError;
 }
+
+isolated function getJsonSchemaResponseTypeForModel(map<json> schema) returns map<json> {
+    if schema.keys().length() == 0 {
+        return {'type: "text"};
+    }
+
+    map<json> newSchema = map from string k in schema.keys() select [k, schema[k]];
+    // Azure openAI only supports JSON schemas with no additional properties for structured outputs.
+    newSchema["additionalProperties"] = false;
+
+    return {
+        'type: "json_schema", 
+        json_schema: {
+            name: "NAME",
+            schema: newSchema,
+            strict: false
+        }
+    };
+}

@@ -19,3 +19,9 @@ groupId = "io.ballerina.lib"
 artifactId = "np-native"
 version = "0.8.2"
 path = "../native/build/libs/np-native-0.8.2-SNAPSHOT.jar"
+
+[[dependency]]
+org="ballerinax"
+name="azure.openai.chat"
+version="3.0.2"
+repository="local"

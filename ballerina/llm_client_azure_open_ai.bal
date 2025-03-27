@@ -13,9 +13,10 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import ballerinax/azure.openai.chat;
+
 import ballerina/http;
 import ballerina/log;
+import ballerinax/azure.openai.chat;
 
 # Configuration for Azure OpenAI model.
 public type AzureOpenAIModelConfig record {|
@@ -35,30 +36,22 @@ type ChatCompletionAzureRequest record {
 
 type ChatCompletionRequest record {
     string prompt;
-    AzureOpenAIResponseFormat responseFormat = {'type: "text"};
+    AzureOpenAIResponseFormat responseFormat;
 };
 
-type AzureOpenAIResponseFormat ResponseFormatText|ResponseFormatJsonObject|ResponseFormatJsonSchema;
-
-type ResponseFormatText record {|
-    "text" 'type;
-|};
-
-type ResponseFormatJsonObject record {|
-    "json_object" 'type;
-|};
+type AzureOpenAIResponseFormat ResponseFormatJsonSchema;
 
 type ResponseFormatJsonSchema record {|
     "json_schema" 'type;
     ResponseFormatJsonSchemaValue json_schema;
 |};
 
-type ResponseFormatJsonSchemaValue record {
+type ResponseFormatJsonSchemaValue record {|
     string description?;
     string name;
     json schema?;
     boolean? strict = true;
-};
+|};
 
 type ChatCompletionAzureResponse record {
     AzureOpenAIResponseMessage[] choices?;
@@ -74,7 +67,6 @@ type AzureOpenAIResponseMessage record {
 public isolated distinct client class AzureOpenAIModel {
     *Model;
 
-    private final string serviceUrl;
     private final string deploymentId;
     private final string apiVersion;
     private final string apiKey;
@@ -104,15 +96,17 @@ public isolated distinct client class AzureOpenAIModel {
     isolated remote function call(string prompt, map<json> expectedResponseSchema) returns json|error {
         ChatCompletionAzureRequest chatBody = {
             messages: [{role: "user", "content": getPromptWithExpectedResponseSchema(prompt, expectedResponseSchema)}],
-            response_format: check getJsonSchemaResponseTypeForAzureOpenAI(expectedResponseSchema)
+            response_format: check getJsonSchemaResponseFormatForAzureOpenAI(expectedResponseSchema)
         };
 
-        string resourcePath = string `/deployments/${getEncodedUri(self.deploymentId)}/chat/completions?api-version=${self.apiVersion}`;
+        string resourcePath = string
+            `/deployments/${getEncodedUri(self.deploymentId)}/chat/completions?api-version=${self.apiVersion}`;
         http:Request request = new;
         json jsonBody = chatBody.toJson();
         request.setPayload(jsonBody, "application/json");
 
-        ChatCompletionAzureResponse|error chatResult = self.azureOpenAIClient->post(resourcePath, request, {api\-key: self.apiKey});
+        ChatCompletionAzureResponse|error chatResult = self.azureOpenAIClient->post(
+                                            resourcePath, request, {api\-key: self.apiKey});
 
         if chatResult is error {
             log:printError("Chat completion failed", chatResult);
@@ -133,6 +127,6 @@ public isolated distinct client class AzureOpenAIModel {
     }
 }
 
-isolated function getJsonSchemaResponseTypeForAzureOpenAI(map<json> schema) returns AzureOpenAIResponseFormat|error {
-    return check getJsonSchemaResponseTypeForModel(schema).cloneWithType();
+isolated function getJsonSchemaResponseFormatForAzureOpenAI(map<json> schema) returns AzureOpenAIResponseFormat|error {
+    return getJsonSchemaResponseFormatForModel(schema).cloneWithType();
 }

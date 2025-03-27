@@ -53,11 +53,11 @@ public isolated distinct client class DefaultBallerinaModel {
 
     isolated remote function call(string prompt, map<json> expectedResponseSchema) returns json|error {
         http:Client cl = self.cl;
-        http:Response chatResponse = 
+        http:Response chatResponse =
             check cl->/chat/complete.post({
-                prompt: getPromptWithExpectedResponseSchema(prompt, expectedResponseSchema),
-                responseFormat: check getJsonSchemaResponseTypeForDefaultModel(expectedResponseSchema)
-            });
+            prompt: getPromptWithExpectedResponseSchema(prompt, expectedResponseSchema),
+            responseFormat: check getJsonSchemaResponseFormatForDefaultModel(expectedResponseSchema)
+        });
         int statusCode = chatResponse.statusCode;
         if statusCode == UNAUTHORIZED {
             return error("The default Ballerina model is being used. The token has expired and needs to be regenerated.");
@@ -76,6 +76,6 @@ public isolated distinct client class DefaultBallerinaModel {
     }
 }
 
-isolated function getJsonSchemaResponseTypeForDefaultModel(map<json> schema) returns DefaultClientResponseFormat|error {
-    return check getJsonSchemaResponseTypeForModel(schema).cloneWithType();
+isolated function getJsonSchemaResponseFormatForDefaultModel(map<json> schema) returns DefaultClientResponseFormat|error {
+    return check getJsonSchemaResponseFormatForModel(schema).cloneWithType();
 }

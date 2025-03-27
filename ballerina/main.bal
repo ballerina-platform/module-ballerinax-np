@@ -13,6 +13,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+import ballerina/url;
 
 const JSON_CONVERSION_ERROR = "FromJsonStringError";
 const CONVERSION_ERROR = "ConversionError";
@@ -135,20 +136,21 @@ isolated function handlepParseResponseError(error chatResponseError) returns err
 }
 
 isolated function getJsonSchemaResponseTypeForModel(map<json> schema) returns map<json> {
-    if schema.keys().length() == 0 {
-        return {'type: "text"};
-    }
-
-    map<json> newSchema = map from string k in schema.keys() select [k, schema[k]];
-    // Azure openAI only supports JSON schemas with no additional properties for structured outputs.
-    newSchema["additionalProperties"] = false;
-
     return {
         'type: "json_schema", 
         json_schema: {
             name: "NAME",
-            schema: newSchema,
+            schema,
             strict: false
         }
     };
+}
+
+isolated function getEncodedUri(anydata value) returns string {
+    string|error encoded = url:encode(value.toString(), "UTF8");
+    if encoded is string {
+        return encoded;
+    } else {
+        return value.toString();
+    }
 }

@@ -110,7 +110,7 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
             NodeFactory.createSimpleNameReferenceNode(NodeFactory.createIdentifierToken(CONTEXT_VAR));
 
     private final ModifierData modifierData;
-    private static CodeModifier.AnalysisData analysisData;
+    private final CodeModifier.AnalysisData analysisData;
 
     PromptAsCodeCodeModificationTask(CodeModifier.AnalysisData analysisData) {
         this.modifierData = new ModifierData();
@@ -136,8 +136,8 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
 
             for (DocumentId documentId: module.documentIds()) {
                 Document document = module.document(documentId);
-                modifierContext.modifySourceFile(modifyDocument(document, modifierData, modifierContext, moduleId),
-                                                 documentId);
+                modifierContext.modifySourceFile(modifyDocument(document, modifierData, modifierContext, moduleId,
+                                                                this.analysisData.typeMapper), documentId);
             }
 
             for (DocumentId documentId: module.testDocumentIds()) {
@@ -148,8 +148,8 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
 
             for (DocumentId documentId: module.testDocumentIds()) {
                 Document document = module.document(documentId);
-                modifierContext.modifyTestSourceFile(modifyDocument(document, modifierData, modifierContext, moduleId),
-                                                     documentId);
+                modifierContext.modifyTestSourceFile(modifyDocument(document, modifierData, modifierContext, moduleId,
+                                                                    this.analysisData.typeMapper), documentId);
             }
         }
     }
@@ -180,11 +180,12 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
     }
 
     private static TextDocument modifyDocument(Document document, ModifierData modifierData,
-                                               SourceModifierContext modifierContext, ModuleId moduleId) {
+                                               SourceModifierContext modifierContext, ModuleId moduleId,
+                                               TypeMapper typeMapper) {
         ModulePartNode modulePartNode = document.syntaxTree().rootNode();
         FunctionModifier functionModifier = new FunctionModifier(modifierData);
-        FunctionCallModifier functionCallModifier =
-                                    new FunctionCallModifier(modifierData, modifierContext, moduleId, document);
+        FunctionCallModifier functionCallModifier = new FunctionCallModifier(modifierData, modifierContext, moduleId,
+                                                                             document, typeMapper);
         TypeDefinitionModifier typeDefinitionModifier = new TypeDefinitionModifier(modifierData.typeSchemas,
                 modifierData);
 
@@ -231,13 +232,15 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
         private final SourceModifierContext modifierContext;
         private final ModuleId moduleId;
         private final Document document;
+        private TypeMapper typeMapper;
 
         FunctionCallModifier(ModifierData modifierData, SourceModifierContext modifierContext, ModuleId moduleId,
-                             Document document) {
+                             Document document, TypeMapper typeMapper) {
             this.modifierData = modifierData;
             this.modifierContext = modifierContext;
             this.moduleId = moduleId;
             this.document = document;
+            this.typeMapper = typeMapper;
         }
 
         @Override
@@ -248,7 +251,7 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
             if (typeSymbol.isEmpty()) {
                 return functionCallExpressionNode;
             }
-            getTypeSchema(typeSymbol.get(), analysisData.typeMapper, modifierData.typeSchemas);
+            getTypeSchema(typeSymbol.get(), typeMapper, modifierData.typeSchemas);
             return functionCallExpressionNode;
         }
     }

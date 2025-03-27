@@ -38,6 +38,7 @@ import io.ballerina.runtime.api.values.BString;
 import io.ballerina.runtime.api.values.BTypedesc;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.ballerina.runtime.api.creators.ValueCreator.createMapValue;
 
@@ -48,14 +49,15 @@ import static io.ballerina.runtime.api.creators.ValueCreator.createMapValue;
  */
 public class Native {
 
-    static Boolean isSchemaGeneratedAtCompileTime;
+//    static Boolean isSchemaGeneratedAtCompileTime;
+    private static final AtomicBoolean isSchemaGeneratedAtCompileTime = new AtomicBoolean(false);
 
     public static Object callLlm(Environment env, BObject prompt, BMap context, BTypedesc targetType) {
-        isSchemaGeneratedAtCompileTime = true;
+        isSchemaGeneratedAtCompileTime.set(true);
         Object jsonSchema = generateJsonSchemaForType(targetType.getDescribingType());
         return env.getRuntime().callFunction(
                 new Module("ballerinax", "np", "0"), "callLlmGeneric", null, prompt, context, targetType,
-                isSchemaGeneratedAtCompileTime ? jsonSchema : null);
+                isSchemaGeneratedAtCompileTime.get() ? jsonSchema : null);
     }
 
     public static Object generateJsonSchemaForType(Type td) {
@@ -134,7 +136,7 @@ public class Native {
                 return entry.getValue();
             }
         }
-        isSchemaGeneratedAtCompileTime = false;
+        isSchemaGeneratedAtCompileTime.set(false);
         return null;
     }
 

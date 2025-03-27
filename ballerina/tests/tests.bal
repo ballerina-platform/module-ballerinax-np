@@ -41,7 +41,7 @@ function testPromptAsCodeFunctionWithStructuredExpectedTypeWithOpenAIClient() re
 }
 
 @test:Config
-function testNegativeJsonConversion() {
+function testJsonConversionError() {
     boolean|error rating = callLlm(`What is 1 + 1?`);
     test:assertTrue(rating is error);
     string message = (<error> rating).message();

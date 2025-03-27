@@ -44,13 +44,16 @@ function testPromptAsCodeFunctionWithStructuredExpectedTypeWithOpenAIClient() re
 function testJsonConversionError() {
     boolean|error rating = callLlm(`What is 1 + 1?`);
     test:assertTrue(rating is error);
-    test:assertTrue((<error> rating).message().includes(ERROR_MESSAGE));
+    string message = (<error> rating).message();
+    test:assertTrue(message.includes(ERROR_MESSAGE), message);
 }
 
-type Foo record{| string name; |};
+type NameRecord record{| string name; |};
+
 @test:Config
 function testJsonConversionError2() {
-    Foo[]|error rating = callLlm(`Tell me name and the age of the top 10 world class cricketers`);
-    test:assertTrue(rating is error);
-    test:assertTrue((<error> rating).message().includes(ERROR_MESSAGE));
+    NameRecord[]|error cricketers = callLlm(`Tell me name and the age of the top 10 world class cricketers`);
+    test:assertTrue(cricketers is error);
+    string message = (<error> cricketers).message();
+    test:assertTrue(message.includes(ERROR_MESSAGE), message);
 }

@@ -13,8 +13,9 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 import ballerinax/azure.openai.chat;
+import ballerina/http;
+import ballerina/log;
 
 # Configuration for Azure OpenAI model.
 public type AzureOpenAIModelConfig record {|
@@ -24,45 +25,105 @@ public type AzureOpenAIModelConfig record {|
     string serviceUrl;
 |};
 
-type AzureOpenAIResponseFormat chat:ResponseFormatText
-            |chat:ResponseFormatJsonObject|chat:ResponseFormatJsonSchema;
+type ChatCompletionAzureRequest record {
+    record {
+        "user"|"system" role;
+        string content;
+    }[] messages = [];
+    AzureOpenAIResponseFormat response_format;
+};
+
+type ChatCompletionRequest record {
+    string prompt;
+    AzureOpenAIResponseFormat responseFormat = {'type: "text"};
+};
+
+type AzureOpenAIResponseFormat ResponseFormatText|ResponseFormatJsonObject|ResponseFormatJsonSchema;
+
+type ResponseFormatText record {|
+    "text" 'type;
+|};
+
+type ResponseFormatJsonObject record {|
+    "json_object" 'type;
+|};
+
+type ResponseFormatJsonSchema record {|
+    "json_schema" 'type;
+    ResponseFormatJsonSchemaValue json_schema;
+|};
+
+type ResponseFormatJsonSchemaValue record {
+    string description?;
+    string name;
+    json schema?;
+    boolean? strict = true;
+};
+
+type ChatCompletionAzureResponse record {
+    AzureOpenAIResponseMessage[] choices?;
+};
+
+type AzureOpenAIResponseMessage record {
+    record {
+        string? content;
+    } message;
+};
 
 # Azure OpenAI model chat completion client.
 public isolated distinct client class AzureOpenAIModel {
     *Model;
 
-    private final chat:Client cl;
+    private final string serviceUrl;
     private final string deploymentId;
     private final string apiVersion;
+    private final string apiKey;
+    private final http:Client azureOpenAIClient;
 
-    public isolated function init(chat:Client|AzureOpenAIModelConfig azureOpenAI,
+    public isolated function init(AzureOpenAIModelConfig azureOpenAI,
             string deploymentId,
             string apiVersion) returns error? {
-        self.cl = azureOpenAI is chat:Client ?
-            azureOpenAI :
-            check new (azureOpenAI.connectionConfig, azureOpenAI.serviceUrl);
         self.deploymentId = deploymentId;
         self.apiVersion = apiVersion;
+        http:BearerTokenConfig|chat:ApiKeysConfig auth = azureOpenAI.connectionConfig.auth;
+
+        if auth is http:BearerTokenConfig {
+            self.apiKey = auth.token;
+        } else {
+            self.apiKey = auth.apiKey;
+        }
+
+        self.azureOpenAIClient = check new (
+            url = azureOpenAI.serviceUrl,
+            config = {
+                timeout: 60
+            }
+        );
     }
 
     isolated remote function call(string prompt, map<json> expectedResponseSchema) returns json|error {
-        AzureOpenAIResponseFormat responseFormat = check getJsonSchemaResponseTypeForAzureOpenAI(expectedResponseSchema);
-        chat:CreateChatCompletionRequest chatBody = {
+        ChatCompletionAzureRequest chatBody = {
             messages: [{role: "user", "content": getPromptWithExpectedResponseSchema(prompt, expectedResponseSchema)}],
-            response_format: responseFormat
+            response_format: check getJsonSchemaResponseTypeForAzureOpenAI(expectedResponseSchema)
         };
 
-        chat:Client cl = self.cl;
-        chat:inline_response_200_1 chatResult =
-            check cl->/deployments/[self.deploymentId]/chat/completions.post(chatBody, {}, api\-version = self.apiVersion);
-        
-        if chatResult is chat:createChatCompletionStreamResponse {
-            return error("Invalid completion choices");
+        string resourcePath = string `/deployments/${getEncodedUri(self.deploymentId)}/chat/completions?api-version=${self.apiVersion}`;
+        http:Request request = new;
+        json jsonBody = chatBody.toJson();
+        request.setPayload(jsonBody, "application/json");
+
+        ChatCompletionAzureResponse|error chatResult = self.azureOpenAIClient->post(resourcePath, request, {api\-key: self.apiKey});
+
+        if chatResult is error {
+            log:printError("Chat completion failed", chatResult);
+            return error("Chat completion failed");
         }
 
-        chat:CreateChatCompletionResponse chatCompletionResponse = <chat:CreateChatCompletionResponse>chatResult;
+        AzureOpenAIResponseMessage[]? choices = chatResult.choices;
 
-        chat:CreateChatCompletionResponse_choices[] choices = chatCompletionResponse.choices;
+        if choices is () {
+            return error("No completion message");
+        }
 
         string? resp = choices[0].message?.content;
         if resp is () {

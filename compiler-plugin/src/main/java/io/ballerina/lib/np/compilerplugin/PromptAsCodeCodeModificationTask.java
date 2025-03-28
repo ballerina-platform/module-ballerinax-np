@@ -232,7 +232,7 @@ public class PromptAsCodeCodeModificationTask implements ModifierTask<SourceModi
         private final SourceModifierContext modifierContext;
         private final ModuleId moduleId;
         private final Document document;
-        private TypeMapper typeMapper;
+        private final TypeMapper typeMapper;
 
         FunctionCallModifier(ModifierData modifierData, SourceModifierContext modifierContext, ModuleId moduleId,
                              Document document, TypeMapper typeMapper) {

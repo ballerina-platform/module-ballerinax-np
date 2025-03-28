@@ -47,10 +47,10 @@ function testJsonConversionError() {
     test:assertTrue((<error> rating).message().includes(ERROR_MESSAGE));
 }
 
-type Name record{| string name; |};
+type RecordForInvalidBinding record {| string name; |};
 @test:Config
 function testJsonConversionError2() {
-    Name[]|error rating = callLlm(`Tell me name and the age of the top 10 world class cricketers`);
+    RecordForInvalidBinding[]|error rating = callLlm(`Tell me name and the age of the top 10 world class cricketers`);
     test:assertTrue(rating is error);
     test:assertTrue((<error> rating).message().includes(ERROR_MESSAGE));
 }

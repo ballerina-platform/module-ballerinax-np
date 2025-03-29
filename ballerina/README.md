@@ -53,6 +53,8 @@ The function can then be used in the code similar to any other function.
 Review review = check reviewBlog(blog);
 ```
 
+### Configuring the model
+
 The model to use can be set either by configuration or by introducing a `context` parameter of type `np:Context`, with a `model` field of type `np:Model`, in the function.
 
 1. Configuration

@@ -48,28 +48,26 @@ import static io.ballerina.runtime.api.creators.ValueCreator.createMapValue;
  */
 public class Native {
 
-    static Boolean isSchemaGeneratedAtCompileTime;
-
     public static Object callLlm(Environment env, BObject prompt, BMap context, BTypedesc targetType) {
-        isSchemaGeneratedAtCompileTime = true;
-        Object jsonSchema = generateJsonSchemaForType(targetType.getDescribingType());
+        SchemaGenerationContext schemaGenerationContext = new SchemaGenerationContext();
+        Object jsonSchema = generateJsonSchemaForType(targetType.getDescribingType(), schemaGenerationContext);
         return env.getRuntime().callFunction(
                 new Module("ballerinax", "np", "0"), "callLlmGeneric", null, prompt, context, targetType,
-                isSchemaGeneratedAtCompileTime ? jsonSchema : null);
+                schemaGenerationContext.isSchemaGeneratedAtCompileTime ? jsonSchema : null);
     }
 
-    public static Object generateJsonSchemaForType(Type td) {
+    public static Object generateJsonSchemaForType(Type td, SchemaGenerationContext schemaGenerationContext) {
         Type type = TypeUtils.getReferredType(td);
         if (isSimpleType(type)) {
             return createSimpleTypeSchema(type);
         }
 
         return switch (type) {
-            case RecordType recordType -> generateJsonSchemaForRecordType(recordType);
+            case RecordType recordType -> generateJsonSchemaForRecordType(recordType, schemaGenerationContext);
             case JsonType ignored -> generateJsonSchemaForJson();
-            case ArrayType arrayType -> generateJsonSchemaForArrayType(arrayType);
-            case TupleType tupleType -> generateJsonSchemaForTupleType(tupleType);
-            case UnionType unionType -> generateJsonSchemaForUnionType(unionType);
+            case ArrayType arrayType -> generateJsonSchemaForArrayType(arrayType, schemaGenerationContext);
+            case TupleType tupleType -> generateJsonSchemaForTupleType(tupleType, schemaGenerationContext);
+            case UnionType unionType -> generateJsonSchemaForUnionType(unionType, schemaGenerationContext);
             default -> null;
         };
     }
@@ -93,21 +91,24 @@ public class Native {
         return schemaMap;
     }
 
-    private static Object generateJsonSchemaForArrayType(ArrayType arrayType) {
+    private static Object generateJsonSchemaForArrayType(ArrayType arrayType,
+                                                         SchemaGenerationContext schemaGenerationContext) {
         BMap<BString, Object> schemaMap = createMapValue(TypeCreator.createMapType(PredefinedTypes.TYPE_JSON));
         Type elementType = TypeUtils.getReferredType(arrayType.getElementType());
         schemaMap.put(StringUtils.fromString("type"), StringUtils.fromString("array"));
-        schemaMap.put(StringUtils.fromString("items"), generateJsonSchemaForType(elementType));
+        schemaMap.put(StringUtils.fromString("items"), generateJsonSchemaForType(elementType,
+                                                                                    schemaGenerationContext));
         return schemaMap;
     }
 
-    private static Object generateJsonSchemaForTupleType(TupleType tupleType) {
+    private static Object generateJsonSchemaForTupleType(TupleType tupleType,
+                                                         SchemaGenerationContext schemaGenerationContext) {
         BMap<BString, Object> schemaMap = createMapValue(TypeCreator.createMapType(PredefinedTypes.TYPE_JSON));
         schemaMap.put(StringUtils.fromString("type"), StringUtils.fromString("array"));
         BArray annotationArray = ValueCreator.createArrayValue(TypeCreator.createArrayType(PredefinedTypes.TYPE_JSON));
         int index = 0;
         for (Type type : tupleType.getTupleTypes()) {
-            annotationArray.add(index++, generateJsonSchemaForType(type));
+            annotationArray.add(index++, generateJsonSchemaForType(type, schemaGenerationContext));
         }
         schemaMap.put(StringUtils.fromString("items"), annotationArray);
         return schemaMap;
@@ -128,24 +129,26 @@ public class Native {
         };
     }
 
-    private static Object generateJsonSchemaForRecordType(RecordType recordType) {
+    private static Object generateJsonSchemaForRecordType(RecordType recordType,
+                                                          SchemaGenerationContext schemaGenerationContext) {
         for (Map.Entry<BString, Object> entry : recordType.getAnnotations().entrySet()) {
             if ("ballerinax/np:0:Schema".equals(entry.getKey().getValue())) {
                 return entry.getValue();
             }
         }
-        isSchemaGeneratedAtCompileTime = false;
+        schemaGenerationContext.isSchemaGeneratedAtCompileTime = false;
         return null;
     }
 
-    private static Object generateJsonSchemaForUnionType(UnionType unionType) {
+    private static Object generateJsonSchemaForUnionType(UnionType unionType,
+                                                         SchemaGenerationContext schemaGenerationContext) {
         BMap<BString, Object> schemaMap = createMapValue(TypeCreator.createMapType(PredefinedTypes.TYPE_JSON));
         schemaMap.put(StringUtils.fromString("type"), StringUtils.fromString("object"));
         BArray annotationArray = ValueCreator.createArrayValue(TypeCreator.createArrayType(PredefinedTypes.TYPE_JSON));
 
         int index = 0;
         for (Type type : unionType.getMemberTypes()) {
-            annotationArray.add(index++, generateJsonSchemaForType(type));
+            annotationArray.add(index++, generateJsonSchemaForType(type, schemaGenerationContext));
         }
 
         schemaMap.put(StringUtils.fromString("anyOf"), annotationArray);
@@ -184,5 +187,9 @@ public class Native {
 
     public static boolean containsNil(BTypedesc targetType) {
         return targetType.getDescribingType().isNilable();
+    }
+
+    private static class SchemaGenerationContext {
+        boolean isSchemaGeneratedAtCompileTime = true;
     }
 }

@@ -189,7 +189,7 @@ public class Native {
         return targetType.getDescribingType().isNilable();
     }
 
-    public static class SchemaGenerationContext {
+    private static class SchemaGenerationContext {
         boolean isSchemaGeneratedAtCompileTime = true;
     }
 }

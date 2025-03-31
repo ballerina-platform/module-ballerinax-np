@@ -63,3 +63,28 @@ final string expectedPromptStringForRateBlog4 = string `Tell me name and the age
         
         Schema:
         {"$schema":"https://json-schema.org/draft/2020-12/schema", "type":"array", "items":{"$schema":"https://json-schema.org/draft/2020-12/schema", "type":"object", "properties":{"name":{"type":"string"}}, "required":["name"]}}`;
+
+final string expectedPromptStringForBalProgram = string `What's the output of the Ballerina code below?
+
+    ${"```"}ballerina
+    import ballerina/io;
+
+    public function main() {
+        int x = 10;
+        int y = 20;
+        io:println(x + y);
+    \}
+    ${"```"}.  
+        The output should be a JSON value that satisfies the following JSON schema, 
+        returned within a markdown snippet enclosed within ${"```json"} and ${"```"}
+        
+        Schema:
+        {"type":"integer"}`;
+
+final string expectedPromptStringForCountry = string `Which country is known as the pearl of the Indian Ocean?.  
+        The output should be a JSON value that satisfies the following JSON schema, 
+        returned within a markdown snippet enclosed within ${"```json"} and ${"```"}
+        
+        Schema:
+        {"type":"string"}`;
+

@@ -100,7 +100,17 @@ isolated function callLlmGeneric(Prompt prompt, Context context, typedesc<json> 
 }
 
 isolated function parseResponseAsJson(string resp) returns json|error {
-    string processedResponse = re `${"```json|```"}`.replaceAll(resp, "");
+    int startDelimLength = 7;
+    int? startIndex = resp.indexOf("```json");
+    if startIndex is () {
+        startIndex = resp.indexOf("```");
+        startDelimLength = 3;
+    }
+    int? endIndex = resp.lastIndexOf("```");
+
+    string processedResponse = startIndex is () || endIndex is () ? 
+        resp : 
+        resp.substring(startIndex + startDelimLength, endIndex).trim();
     json|error result = trap processedResponse.fromJsonString();
     if result is error {
         return handlepParseResponseError(result);

@@ -54,3 +54,25 @@ function testJsonConversionError2() {
     test:assertTrue(rating is error);
     test:assertTrue((<error> rating).message().includes(ERROR_MESSAGE));
 }
+
+@test:Config
+function testJsonContentAfterTextDescription() returns error? {
+    int result = check callLlm(`What's the output of the Ballerina code below?
+
+    ${"```"}ballerina
+    import ballerina/io;
+
+    public function main() {
+        int x = 10;
+        int y = 20;
+        io:println(x + y);
+    \}
+    ${"```"}`);
+    test:assertEquals(result, 30);
+}
+
+@test:Config
+function testJsonContentWithoutJsonAfterBackticks() returns error? {
+    string result = check callLlm(`Which country is known as the pearl of the Indian Ocean?`);
+    test:assertEquals(result, "Sri Lanka");
+}

@@ -15,6 +15,14 @@ isolated function getExpectedPrompt(string message) returns string {
         return expectedPromptStringForRateBlog4;
     }
 
+    if message.startsWith("What's the output of the Ballerina code below?") {
+        return expectedPromptStringForBalProgram;
+    }
+
+    if message.startsWith("Which country") {
+        return expectedPromptStringForCountry;
+    }
+
     return "INVALID";
 }
 
@@ -33,6 +41,14 @@ isolated function getTheMockLLMResult(string message) returns string {
 
     if message.startsWith("Tell me") {
         return "[{\"name\":\"Virat Kohli\",\"age\":33},{\"name\":\"Kane Williamson\",\"age\":30}";
+    }
+
+    if message.startsWith("What's the output of the Ballerina code below?") {
+        return string `The output of the provided Ballerina code calculates the sum of ${"`"}x${"`"} and ${"`"}y${"`"}, which is ${"`"}10 + 20${"`"}. Therefore, the result will be ${"`"}30${"`"}. \n\nHere is the output formatted as a JSON value that satisfies your specified schema:${"\n\n```"}json${"\n"}30${"\n```"}`;
+    }
+
+    if message.startsWith("Which country") {
+        return "```\n\"Sri Lanka\"\n```";
     }
 
     return "INVALID";

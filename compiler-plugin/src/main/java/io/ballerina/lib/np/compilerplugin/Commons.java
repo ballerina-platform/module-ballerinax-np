@@ -59,14 +59,14 @@ class Commons {
             }
 
             Symbol symbol = symbolOptional.get();
-            if (symbol instanceof ModuleSymbol moduleSymbol && isNPModuleImport(moduleSymbol)) {
+            if (symbol instanceof ModuleSymbol moduleSymbol && isNPModule(moduleSymbol)) {
                 return Optional.of(moduleSymbol);
             }
         }
         return Optional.empty();
     }
 
-    static boolean isNPModuleImport(ModuleSymbol moduleSymbol) {
+    static boolean isNPModule(ModuleSymbol moduleSymbol) {
         ModuleID moduleId = moduleSymbol.id();
         return ORG_NAME.equals(moduleId.orgName()) && MODULE_NAME.equals(moduleId.moduleName());
     }

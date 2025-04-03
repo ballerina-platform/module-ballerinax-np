@@ -110,8 +110,8 @@ isolated function parseResponseAsJson(string resp) returns json|error {
     }
     int? endIndex = resp.lastIndexOf("```");
 
-    string processedResponse = startIndex is () || endIndex is () ? 
-        resp : 
+    string processedResponse = startIndex is () || endIndex is () ?
+        resp :
         resp.substring(startIndex + startDelimLength, endIndex).trim();
     json|error result = trap processedResponse.fromJsonString();
     if result is error {

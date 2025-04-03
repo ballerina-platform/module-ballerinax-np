@@ -93,16 +93,15 @@ public isolated distinct client class AzureOpenAIModel {
             response_format: check getJsonSchemaResponseFormatForAzureOpenAI(expectedResponseSchema)
         };
 
-        string resourcePath = string
-            `/deployments/${getEncodedUri(self.deploymentId)}/chat/completions?api-version=${self.apiVersion}`;
-        http:Request request = new;
-        request.setPayload(chatBody);
-
-        ChatCompletionAzureResponse|error chatResult = self.azureOpenAIClient->post(
-                                            resourcePath, request, {api\-key: self.apiKey});
+        ChatCompletionAzureResponse|error chatResult = 
+            self.azureOpenAIClient->/deployments/[getEncodedUri(self.deploymentId)]/chat/completions.post(
+                chatBody,
+                {api\-key: self.apiKey},
+                api\-version=self.apiVersion
+            );
 
         if chatResult is error {
-            return error("Chat completion failed");
+            return error("Chat completion failed", chatResult);
         }
 
         AzureOpenAIResponseMessage[]? choices = chatResult.choices;
@@ -123,34 +122,38 @@ isolated function getJsonSchemaResponseFormatForAzureOpenAI(map<json> schema) re
     return getJsonSchemaResponseFormatForModel(schema).cloneWithType();
 }
 
-isolated function generateHttpClientFromAzureOpenAIModelConfig(AzureOpenAIModelConfig azureOpenAI) 
+isolated function generateHttpClientFromAzureOpenAIModelConfig(AzureOpenAIModelConfig azureOpenAI)
         returns http:Client|error {
     chat:ConnectionConfig config = azureOpenAI.connectionConfig;
     http:ClientConfiguration httpClientConfig = {
-        httpVersion: config.httpVersion, timeout: config.timeout, 
-        forwarded: config.forwarded, poolConfig: config.poolConfig, 
-        compression: config.compression, circuitBreaker: config.circuitBreaker, 
-        retryConfig: config.retryConfig, validation: config.validation
+        httpVersion: config.httpVersion,
+        timeout: config.timeout,
+        forwarded: config.forwarded,
+        poolConfig: config.poolConfig,
+        compression: config.compression,
+        circuitBreaker: config.circuitBreaker,
+        retryConfig: config.retryConfig,
+        validation: config.validation
     };
 
     if config.http1Settings is chat:ClientHttp1Settings {
-        chat:ClientHttp1Settings settings = check config.http1Settings.ensureType(chat:ClientHttp1Settings);
+        chat:ClientHttp1Settings settings = check config.http1Settings.ensureType();
         httpClientConfig.http1Settings = {...settings};
     }
     if config.http2Settings is http:ClientHttp2Settings {
-        httpClientConfig.http2Settings = check config.http2Settings.ensureType(http:ClientHttp2Settings);
+        httpClientConfig.http2Settings = check config.http2Settings.ensureType();
     }
     if config.cache is http:CacheConfig {
-        httpClientConfig.cache = check config.cache.ensureType(http:CacheConfig);
+        httpClientConfig.cache = check config.cache.ensureType();
     }
     if config.responseLimits is http:ResponseLimitConfigs {
-        httpClientConfig.responseLimits = check config.responseLimits.ensureType(http:ResponseLimitConfigs);
+        httpClientConfig.responseLimits = check config.responseLimits.ensureType();
     }
     if config.secureSocket is http:ClientSecureSocket {
-        httpClientConfig.secureSocket = check config.secureSocket.ensureType(http:ClientSecureSocket);
+        httpClientConfig.secureSocket = check config.secureSocket.ensureType();
     }
     if config.proxy is http:ProxyConfig {
-        httpClientConfig.proxy = check config.proxy.ensureType(http:ProxyConfig);
+        httpClientConfig.proxy = check config.proxy.ensureType();
     }
 
     return new (azureOpenAI.serviceUrl, httpClientConfig);

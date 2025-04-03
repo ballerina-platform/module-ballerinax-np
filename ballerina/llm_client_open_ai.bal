@@ -65,5 +65,5 @@ public isolated distinct client class OpenAIModel {
 }
 
 isolated function getJsonSchemaResponseFormatForOpenAI(map<json> schema) returns OpenAIResponseFormat|error {
-    return check getJsonSchemaResponseFormatForModel(schema).cloneWithType();
+    return getJsonSchemaResponseFormatForModel(schema).cloneWithType();
 }

@@ -124,7 +124,8 @@ isolated function getJsonSchemaResponseFormatForAzureOpenAI(map<json> schema) re
     return getJsonSchemaResponseFormatForModel(schema).cloneWithType();
 }
 
-public isolated function generateHttpClientFromAzureOpenAIModelConfig(AzureOpenAIModelConfig azureOpenAI) returns http:Client|error {
+isolated function generateHttpClientFromAzureOpenAIModelConfig(AzureOpenAIModelConfig azureOpenAI) 
+        returns http:Client|error {
     chat:ConnectionConfig config = azureOpenAI.connectionConfig;
     http:ClientConfiguration httpClientConfig = {
         httpVersion: config.httpVersion, timeout: config.timeout, 

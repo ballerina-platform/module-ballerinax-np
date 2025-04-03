@@ -140,7 +140,7 @@ isolated function getJsonSchemaResponseFormatForModel(map<json> schema) returns 
     return {
         'type: "json_schema",
         json_schema: {
-            name: "NATURAL_FUNCTION_RESPONSE_SCHEMA",
+            name: "LlmResponseSchema",
             schema,
             strict: false
         }

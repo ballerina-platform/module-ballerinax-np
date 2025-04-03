@@ -77,5 +77,5 @@ public isolated distinct client class DefaultBallerinaModel {
 }
 
 isolated function getJsonSchemaResponseFormatForDefaultModel(map<json> schema) returns DefaultClientResponseFormat|error {
-    return check getJsonSchemaResponseFormatForModel(schema).cloneWithType();
+    return getJsonSchemaResponseFormatForModel(schema).cloneWithType();
 }

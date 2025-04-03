@@ -85,12 +85,7 @@ public isolated distinct client class AzureOpenAIModel {
             self.apiKey = auth.apiKey;
         }
 
-        self.azureOpenAIClient = check new (
-            url = azureOpenAI.serviceUrl,
-            config = {
-                timeout: 60
-            }
-        );
+        self.azureOpenAIClient = check generateHttpClientFromAzureOpenAIModelConfig(azureOpenAI);
     }
 
     isolated remote function call(string prompt, map<json> expectedResponseSchema) returns json|error {
@@ -103,13 +98,12 @@ public isolated distinct client class AzureOpenAIModel {
             `/deployments/${getEncodedUri(self.deploymentId)}/chat/completions?api-version=${self.apiVersion}`;
         http:Request request = new;
         json jsonBody = chatBody.toJson();
-        request.setPayload(jsonBody, "application/json");
+        request.setPayload(jsonBody);
 
         ChatCompletionAzureResponse|error chatResult = self.azureOpenAIClient->post(
                                             resourcePath, request, {api\-key: self.apiKey});
 
         if chatResult is error {
-            log:printError("Chat completion failed", chatResult);
             return error("Chat completion failed");
         }
 
@@ -129,4 +123,38 @@ public isolated distinct client class AzureOpenAIModel {
 
 isolated function getJsonSchemaResponseFormatForAzureOpenAI(map<json> schema) returns AzureOpenAIResponseFormat|error {
     return getJsonSchemaResponseFormatForModel(schema).cloneWithType();
+}
+
+public isolated function generateHttpClientFromAzureOpenAIModelConfig(AzureOpenAIModelConfig azureOpenAI) returns http:Client|error {
+    chat:ConnectionConfig config = azureOpenAI.connectionConfig;
+    http:ClientConfiguration httpClientConfig = {
+        httpVersion: config.httpVersion, timeout: config.timeout, 
+        forwarded: config.forwarded, poolConfig: config.poolConfig, 
+        compression: config.compression, circuitBreaker: config.circuitBreaker, 
+        retryConfig: config.retryConfig, validation: config.validation
+    };
+    
+    do {
+        if config.http1Settings is chat:ClientHttp1Settings {
+            chat:ClientHttp1Settings settings = check config.http1Settings.ensureType(chat:ClientHttp1Settings);
+            httpClientConfig.http1Settings = {...settings};
+        }
+        if config.http2Settings is http:ClientHttp2Settings {
+            httpClientConfig.http2Settings = check config.http2Settings.ensureType(http:ClientHttp2Settings);
+        }
+        if config.cache is http:CacheConfig {
+            httpClientConfig.cache = check config.cache.ensureType(http:CacheConfig);
+        }
+        if config.responseLimits is http:ResponseLimitConfigs {
+            httpClientConfig.responseLimits = check config.responseLimits.ensureType(http:ResponseLimitConfigs);
+        }
+        if config.secureSocket is http:ClientSecureSocket {
+            httpClientConfig.secureSocket = check config.secureSocket.ensureType(http:ClientSecureSocket);
+        }
+        if config.proxy is http:ProxyConfig {
+            httpClientConfig.proxy = check config.proxy.ensureType(http:ProxyConfig);
+        }
+    }
+
+    return new (azureOpenAI.serviceUrl, httpClientConfig);
 }

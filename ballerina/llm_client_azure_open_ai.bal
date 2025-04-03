@@ -93,11 +93,11 @@ public isolated distinct client class AzureOpenAIModel {
             response_format: check getJsonSchemaResponseFormatForAzureOpenAI(expectedResponseSchema)
         };
 
-        ChatCompletionAzureResponse|error chatResult = 
+        ChatCompletionAzureResponse|error chatResult =
             self.azureOpenAIClient->/deployments/[getEncodedUri(self.deploymentId)]/chat/completions.post(
                 chatBody,
                 {api\-key: self.apiKey},
-                api\-version=self.apiVersion
+                api\-version = self.apiVersion
             );
 
         if chatResult is error {

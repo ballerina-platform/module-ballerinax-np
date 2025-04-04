@@ -14,6 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/http;
 import ballerinax/azure.openai.chat;
 
 # Configuration for Azure OpenAI model.
@@ -24,41 +25,89 @@ public type AzureOpenAIModelConfig record {|
     string serviceUrl;
 |};
 
+type ChatCompletionAzureRequest record {
+    record {
+        "user"|"system" role;
+        string content;
+    }[] messages = [];
+    AzureOpenAIResponseFormat response_format;
+};
+
+type ChatCompletionRequest record {
+    string prompt;
+    AzureOpenAIResponseFormat responseFormat;
+};
+
+type AzureOpenAIResponseFormat ResponseFormatJsonSchema;
+
+type ResponseFormatJsonSchema record {|
+    "json_schema" 'type;
+    ResponseFormatJsonSchemaValue json_schema;
+|};
+
+type ResponseFormatJsonSchemaValue record {|
+    string description?;
+    string name;
+    json schema?;
+    boolean? strict = true;
+|};
+
+type ChatCompletionAzureResponse record {
+    AzureOpenAIResponseMessage[] choices?;
+};
+
+type AzureOpenAIResponseMessage record {
+    record {
+        string? content;
+    } message;
+};
+
 # Azure OpenAI model chat completion client.
 public isolated distinct client class AzureOpenAIModel {
     *Model;
 
-    private final chat:Client cl;
     private final string deploymentId;
     private final string apiVersion;
+    private final string apiKey;
+    private final http:Client azureOpenAIClient;
 
-    public isolated function init(chat:Client|AzureOpenAIModelConfig azureOpenAI,
+    public isolated function init(AzureOpenAIModelConfig azureOpenAI,
             string deploymentId,
             string apiVersion) returns error? {
-        self.cl = azureOpenAI is chat:Client ?
-            azureOpenAI :
-            check new (azureOpenAI.connectionConfig, azureOpenAI.serviceUrl);
         self.deploymentId = deploymentId;
         self.apiVersion = apiVersion;
+        http:BearerTokenConfig|chat:ApiKeysConfig auth = azureOpenAI.connectionConfig.auth;
+
+        if auth is http:BearerTokenConfig {
+            self.apiKey = auth.token;
+        } else {
+            self.apiKey = auth.apiKey;
+        }
+
+        self.azureOpenAIClient = check generateHttpClientFromAzureOpenAIModelConfig(azureOpenAI);
     }
 
     isolated remote function call(string prompt, map<json> expectedResponseSchema) returns json|error {
-        chat:CreateChatCompletionRequest chatBody = {
-            messages: [{role: "user", "content": getPromptWithExpectedResponseSchema(prompt, expectedResponseSchema)}]
+        ChatCompletionAzureRequest chatBody = {
+            messages: [{role: "user", "content": getPromptWithExpectedResponseSchema(prompt, expectedResponseSchema)}],
+            response_format: check getJsonSchemaResponseFormatForAzureOpenAI(expectedResponseSchema)
         };
 
-        chat:Client cl = self.cl;
-        chat:CreateChatCompletionResponse chatResult =
-            check cl->/deployments/[self.deploymentId]/chat/completions.post(self.apiVersion, chatBody);
-        record {
-            chat:ChatCompletionResponseMessage message?;
-            chat:ContentFilterChoiceResults content_filter_results?;
-            int index?;
-            string finish_reason?;
-        }[]? choices = chatResult.choices;
+        ChatCompletionAzureResponse|error chatResult =
+            self.azureOpenAIClient->/deployments/[getEncodedUri(self.deploymentId)]/chat/completions.post(
+                chatBody,
+                {api\-key: self.apiKey},
+                api\-version = self.apiVersion
+            );
+
+        if chatResult is error {
+            return error("Chat completion failed", chatResult);
+        }
+
+        AzureOpenAIResponseMessage[]? choices = chatResult.choices;
 
         if choices is () {
-            return error("No completion choices");
+            return error("No completion message");
         }
 
         string? resp = choices[0].message?.content;
@@ -67,4 +116,45 @@ public isolated distinct client class AzureOpenAIModel {
         }
         return parseResponseAsJson(resp);
     }
+}
+
+isolated function getJsonSchemaResponseFormatForAzureOpenAI(map<json> schema) returns AzureOpenAIResponseFormat|error {
+    return getJsonSchemaResponseFormatForModel(schema).cloneWithType();
+}
+
+isolated function generateHttpClientFromAzureOpenAIModelConfig(AzureOpenAIModelConfig azureOpenAI)
+        returns http:Client|error {
+    chat:ConnectionConfig config = azureOpenAI.connectionConfig;
+    http:ClientConfiguration httpClientConfig = {
+        httpVersion: config.httpVersion,
+        timeout: config.timeout,
+        forwarded: config.forwarded,
+        poolConfig: config.poolConfig,
+        compression: config.compression,
+        circuitBreaker: config.circuitBreaker,
+        retryConfig: config.retryConfig,
+        validation: config.validation
+    };
+
+    if config.http1Settings is chat:ClientHttp1Settings {
+        chat:ClientHttp1Settings settings = check config.http1Settings.ensureType();
+        httpClientConfig.http1Settings = {...settings};
+    }
+    if config.http2Settings is http:ClientHttp2Settings {
+        httpClientConfig.http2Settings = check config.http2Settings.ensureType();
+    }
+    if config.cache is http:CacheConfig {
+        httpClientConfig.cache = check config.cache.ensureType();
+    }
+    if config.responseLimits is http:ResponseLimitConfigs {
+        httpClientConfig.responseLimits = check config.responseLimits.ensureType();
+    }
+    if config.secureSocket is http:ClientSecureSocket {
+        httpClientConfig.secureSocket = check config.secureSocket.ensureType();
+    }
+    if config.proxy is http:ProxyConfig {
+        httpClientConfig.proxy = check config.proxy.ensureType();
+    }
+
+    return new (azureOpenAI.serviceUrl, httpClientConfig);
 }

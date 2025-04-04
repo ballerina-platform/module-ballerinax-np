@@ -5,9 +5,9 @@ import ballerina/test;
 
 service /llm on new http:Listener(8080) {
     resource function post azureopenai/deployments/gpt4onew/chat/completions(
-            string api\-version, azureOpenAIChat:CreateChatCompletionRequest payload)
+            string api\-version, ChatCompletionAzureRequest payload)
                 returns json|error {
-        test:assertEquals(api\-version, "2023-08-01-preview");
+        test:assertEquals(api\-version, "2024-10-21");
         azureOpenAIChat:ChatCompletionRequestMessage[]? messages = payload.messages;
         if messages is () {
             test:assertFail("Expected messages in the payload");
@@ -35,7 +35,7 @@ service /llm on new http:Listener(8080) {
     resource function post openai/chat/completions(openAIChat:CreateChatCompletionRequest payload)
             returns json|error {
 
-        azureOpenAIChat:ChatCompletionRequestMessage message = payload.messages[0];
+        openAIChat:ChatCompletionRequestMessage message = payload.messages[0];
         anydata content = message["content"];
         string contentStr = content.toString();
         test:assertEquals(message.role, "user");

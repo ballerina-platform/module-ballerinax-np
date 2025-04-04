@@ -14,6 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/url;
+
 const JSON_CONVERSION_ERROR = "FromJsonStringError";
 const CONVERSION_ERROR = "ConversionError";
 const ERROR_MESSAGE = "Error occurred while attempting to parse the response from the LLM as the expected type. Retrying and/or validating the prompt could fix the response.";
@@ -92,10 +94,10 @@ isolated function getPromptWithExpectedResponseSchema(string prompt, map<json> e
         ${expectedResponseSchema.toJsonString()}`;
 
 isolated function callLlmGeneric(Prompt prompt, Context context, typedesc<json> targetType,
-                                 map<json>? jsonSchema) returns json|error {
+        map<json>? jsonSchema) returns json|error {
     Model model = context.model;
     json resp =
-         check model->call(buildPromptString(prompt), jsonSchema ?: generateJsonSchemaForTypedescAsJson(targetType));
+        check model->call(buildPromptString(prompt), jsonSchema ?: generateJsonSchemaForTypedescAsJson(targetType));
     return parseResponseAsType(resp, targetType);
 }
 
@@ -108,8 +110,8 @@ isolated function parseResponseAsJson(string resp) returns json|error {
     }
     int? endIndex = resp.lastIndexOf("```");
 
-    string processedResponse = startIndex is () || endIndex is () ? 
-        resp : 
+    string processedResponse = startIndex is () || endIndex is () ?
+        resp :
         resp.substring(startIndex + startDelimLength, endIndex).trim();
     json|error result = trap processedResponse.fromJsonString();
     if result is error {
@@ -127,9 +129,25 @@ isolated function parseResponseAsType(json resp, typedesc<json> targetType) retu
 }
 
 isolated function handlepParseResponseError(error chatResponseError) returns error {
-    if chatResponseError.message().includes(JSON_CONVERSION_ERROR) 
+    if chatResponseError.message().includes(JSON_CONVERSION_ERROR)
             || chatResponseError.message().includes(CONVERSION_ERROR) {
         return error(string `${ERROR_MESSAGE}`, detail = chatResponseError);
     }
     return chatResponseError;
+}
+
+isolated function getJsonSchemaResponseFormatForModel(map<json> schema) returns map<json> {
+    return {
+        'type: "json_schema",
+        json_schema: {
+            name: "LlmResponseSchema",
+            schema,
+            strict: false
+        }
+    };
+}
+
+isolated function getEncodedUri(anydata value) returns string {
+    string|error encoded = url:encode(value.toString(), "UTF8");
+    return encoded is string ? encoded : value.toString();
 }

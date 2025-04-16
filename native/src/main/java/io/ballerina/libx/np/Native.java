@@ -13,10 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.ballerina.lib.np;
+package io.ballerina.libx.np;
 
-import io.ballerina.runtime.api.Environment;
-import io.ballerina.runtime.api.Module;
 import io.ballerina.runtime.api.creators.TypeCreator;
 import io.ballerina.runtime.api.creators.ValueCreator;
 import io.ballerina.runtime.api.flags.SymbolFlags;
@@ -33,7 +31,6 @@ import io.ballerina.runtime.api.utils.StringUtils;
 import io.ballerina.runtime.api.utils.TypeUtils;
 import io.ballerina.runtime.api.values.BArray;
 import io.ballerina.runtime.api.values.BMap;
-import io.ballerina.runtime.api.values.BObject;
 import io.ballerina.runtime.api.values.BString;
 import io.ballerina.runtime.api.values.BTypedesc;
 
@@ -48,21 +45,19 @@ import static io.ballerina.runtime.api.creators.ValueCreator.createMapValue;
  */
 public class Native {
 
-    public static Object callLlm(Environment env, BObject prompt, BMap context, BTypedesc targetType) {
+    public static Object generateJsonSchemaForTypedescNative(BTypedesc td) {
         SchemaGenerationContext schemaGenerationContext = new SchemaGenerationContext();
-        Object jsonSchema = generateJsonSchemaForType(targetType.getDescribingType(), schemaGenerationContext);
-        return env.getRuntime().callFunction(
-                new Module("ballerinax", "np", "0"), "callLlmGeneric", null, prompt, context, targetType,
-                schemaGenerationContext.isSchemaGeneratedAtCompileTime ? jsonSchema : null);
+        Object schema = generateJsonSchemaForType(td.getDescribingType(), schemaGenerationContext);
+        return schemaGenerationContext.isSchemaGeneratedAtCompileTime ? schema : null;
     }
 
-    public static Object generateJsonSchemaForType(Type td, SchemaGenerationContext schemaGenerationContext) {
-        Type type = TypeUtils.getReferredType(td);
-        if (isSimpleType(type)) {
-            return createSimpleTypeSchema(type);
+    private static Object generateJsonSchemaForType(Type t, SchemaGenerationContext schemaGenerationContext) {
+        Type impliedType = TypeUtils.getImpliedType(t);
+        if (isSimpleType(impliedType)) {
+            return createSimpleTypeSchema(impliedType);
         }
 
-        return switch (type) {
+        return switch (impliedType) {
             case RecordType recordType -> generateJsonSchemaForRecordType(recordType, schemaGenerationContext);
             case JsonType ignored -> generateJsonSchemaForJson();
             case ArrayType arrayType -> generateJsonSchemaForArrayType(arrayType, schemaGenerationContext);
@@ -94,7 +89,7 @@ public class Native {
     private static Object generateJsonSchemaForArrayType(ArrayType arrayType,
                                                          SchemaGenerationContext schemaGenerationContext) {
         BMap<BString, Object> schemaMap = createMapValue(TypeCreator.createMapType(PredefinedTypes.TYPE_JSON));
-        Type elementType = TypeUtils.getReferredType(arrayType.getElementType());
+        Type elementType = TypeUtils.getImpliedType(arrayType.getElementType());
         schemaMap.put(StringUtils.fromString("type"), StringUtils.fromString("array"));
         schemaMap.put(StringUtils.fromString("items"), generateJsonSchemaForType(elementType,
                                                                                     schemaGenerationContext));
@@ -132,7 +127,7 @@ public class Native {
     private static Object generateJsonSchemaForRecordType(RecordType recordType,
                                                           SchemaGenerationContext schemaGenerationContext) {
         for (Map.Entry<BString, Object> entry : recordType.getAnnotations().entrySet()) {
-            if ("ballerinax/np:0:Schema".equals(entry.getKey().getValue())) {
+            if ("ballerina/np:0:JsonSchema".equals(entry.getKey().getValue())) {
                 return entry.getValue();
             }
         }
@@ -158,7 +153,20 @@ public class Native {
     // Simple, simple, SIMPLE implementation for now.
     public static void populateFieldInfo(BTypedesc typedesc, BArray names, BArray required,
                                          BArray types, BArray nilable) {
-        RecordType recordType = (RecordType) TypeUtils.getImpliedType(typedesc.getDescribingType());
+        Type impliedType = TypeUtils.getImpliedType(typedesc.getDescribingType());
+
+        RecordType recordType;
+        if (impliedType instanceof UnionType unionType) {
+            for (Type memberType : unionType.getMemberTypes()) {
+                memberType = TypeUtils.getImpliedType(memberType);
+                if (memberType.getTag() != TypeTags.NULL_TAG) {
+                    impliedType = memberType;
+                    break;
+                }
+            }
+        }
+        recordType = (RecordType) impliedType;
+
         for (Field field : recordType.getFields().values()) {
             names.append(StringUtils.fromString(field.getFieldName()));
             long flags = field.getFlags();

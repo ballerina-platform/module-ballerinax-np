@@ -14,25 +14,27 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerinax/openai.chat as openAIChat;
+import np.commons;
+import ballerina/np;
+import ballerinax/openai.chat;
 
 # Configuration for OpenAI model.
-public type OpenAIModelConfig record {|
+public type ModelConfig record {|
     # Connection configuration for the OpenAI model.
-    openAIChat:ConnectionConfig connectionConfig;
+    chat:ConnectionConfig connectionConfig;
     # Service URL for the OpenAI model.
     string serviceUrl?;
 |};
 
 # OpenAI model chat completion client.
-public isolated distinct client class OpenAIModel {
-    *Model;
+public isolated distinct client class Model {
+    *np:Model;
 
-    private final openAIChat:Client cl;
+    private final chat:Client cl;
     private final string model;
 
-    public isolated function init(openAIChat:Client|OpenAIModelConfig openAI, string model) returns error? {
-        self.cl = openAI is openAIChat:Client ?
+    public isolated function init(chat:Client|ModelConfig openAI, string model) returns error? {
+        self.cl = openAI is chat:Client ?
             openAI :
             let string? serviceUrl = openAI?.serviceUrl in
                     serviceUrl is () ?
@@ -41,20 +43,23 @@ public isolated distinct client class OpenAIModel {
         self.model = model;
     }
 
-    isolated remote function call(string prompt, map<json> expectedResponseSchema) returns json|error {
-        openAIChat:CreateChatCompletionRequest chatBody = {
-            messages: [{role: "user", "content": getPromptWithExpectedResponseSchema(prompt, expectedResponseSchema)}],
+    isolated remote function call(np:Prompt prompt, typedesc<anydata> expectedResponseTypedesc) returns anydata|error {
+        chat:CreateChatCompletionRequest chatBody = {
+            messages: [{
+                role: "user", 
+                "content": commons:getPromptWithExpectedResponseSchema(prompt, expectedResponseTypedesc)
+            }],
             model: self.model
         };
 
-        openAIChat:CreateChatCompletionResponse chatResult =
+        chat:CreateChatCompletionResponse chatResult =
             check self.cl->/chat/completions.post(chatBody);
-        openAIChat:CreateChatCompletionResponse_choices[] choices = chatResult.choices;
+        chat:CreateChatCompletionResponse_choices[] choices = chatResult.choices;
 
         string? resp = choices[0].message?.content;
         if resp is () {
             return error("No completion message");
         }
-        return parseResponseAsJson(resp);
+        return commons:parseResponseAsType(resp, expectedResponseTypedesc);
     }
 }

@@ -15,6 +15,7 @@
 // under the License.
 
 import ballerina/jballerina.java;
+import ballerina/np;
 
 type JsonSchema record {|
     string \$schema?;
@@ -30,8 +31,9 @@ type JsonArraySchema record {|
 |};
 
 isolated function generateJsonSchemaForTypedescAsJson(typedesc<json> targetType) returns map<json> =>
-    let map<json>? ann = targetType.@Schema in 
-        ann ?: generateJsonSchemaForTypedesc(targetType, containsNil(targetType));
+    let map<json>? ann = targetType.@np:JsonSchema in ann ?:
+         (generateJsonSchemaForTypedescNative(targetType) 
+                ?: generateJsonSchemaForTypedesc(targetType, containsNil(targetType)));
 
 isolated function generateJsonSchemaForTypedesc(typedesc<json> targetType, boolean nilableType) returns JsonSchema|JsonArraySchema|map<json> {
     if isSimpleType(targetType) {
@@ -46,7 +48,7 @@ isolated function generateJsonSchemaForTypedesc(typedesc<json> targetType, boole
 
     if isArray {
         typedesc<json> arrayMemberType = getArrayMemberType(<typedesc<json[]>>targetType);
-        map<json>? ann = arrayMemberType.@Schema;
+        map<json>? ann = arrayMemberType.@np:JsonSchema;
         if ann !is () {
             return ann;
         }
@@ -76,17 +78,17 @@ isolated function generateJsonSchemaForTypedesc(typedesc<json> targetType, boole
 isolated function populateFieldInfo(typedesc<json> targetType, string[] names, boolean[] required,
         typedesc<json>[] types, boolean[] nilable) = @java:Method {
     name: "populateFieldInfo",
-    'class: "io.ballerina.lib.np.Native"
+    'class: "io.ballerina.libx.np.Native"
 } external;
 
 isolated function getArrayMemberType(typedesc<json> targetType) returns typedesc<json> = @java:Method {
     name: "getArrayMemberType",
-    'class: "io.ballerina.lib.np.Native"
+    'class: "io.ballerina.libx.np.Native"
 } external;
 
 isolated function containsNil(typedesc<json> targetType) returns boolean = @java:Method {
     name: "containsNil",
-    'class: "io.ballerina.lib.np.Native"
+    'class: "io.ballerina.libx.np.Native"
 } external;
 
 isolated function generateJsonSchema(string[] names, boolean[] required,
@@ -103,7 +105,7 @@ isolated function generateJsonSchema(string[] names, boolean[] required,
 
     foreach int i in 0 ..< names.length() {
         string fieldName = names[i];
-        map<json>? ann = types[i].@Schema;
+        map<json>? ann = types[i].@np:JsonSchema;
         JsonSchema|JsonArraySchema|map<json> fieldSchema = ann is () ? getJsonSchemaType(types[i], nilable[i]) : ann;
         properties[fieldName] = fieldSchema;
         if required[i] {
@@ -158,3 +160,8 @@ isolated function getStringRepresentation(typedesc<json> fieldType) returns stri
 
     panic error("JSON schema generation is not yet supported for type: " + fieldType.toString());
 }
+
+isolated function generateJsonSchemaForTypedescNative(typedesc<anydata> td) returns map<json>? = @java:Method {
+    'class: "io.ballerina.libx.np.Native"
+} external;
+

@@ -1,4 +1,4 @@
-[ballerinax.np.defaultModelConfig]
+[ballerina.np.defaultModelConfig]
 serviceUrl = "http://localhost:8080/llm/azureopenai"
 deploymentId = "gpt4onew"
 apiVersion = "2023-08-01-preview"

@@ -14,27 +14,39 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import np.azure.openai as azureOpenAI;
+import np.openai;
+import ballerina/np;
 import ballerina/test;
 
 const ERROR_MESSAGE = "Error occurred while attempting to parse the response from the LLM as the expected type. Retrying and/or validating the prompt could fix the response.";
 
+final np:Model azureOpenAI = check new azureOpenAI:Model({
+    serviceUrl: "http://localhost:8080/llm/azureopenai",
+    connectionConfig: {
+        auth: {
+            apiKey: "not-a-real-api-key"
+        }
+    }
+}, "gpt4onew", "2023-08-01-preview");
+
 @test:Config
 function testPromptAsCodeFunctionWithSimpleExpectedTypeWithDefaultAzureOpenAIClient() returns error? {
-    int rating = check callLlm(`Rate this blog out of 10.
+    int rating = check np:callLlm(`Rate this blog out of 10.
         Title: ${blog1.title}
-        Content: ${blog1.content}`);
+        Content: ${blog1.content}`, {model: azureOpenAI});
     test:assertEquals(rating, 4);
 }
 
 @test:Config
 function testPromptAsCodeFunctionWithStructuredExpectedTypeWithOpenAIClient() returns error? {
-    Model model = check new OpenAIModel({
+    np:Model model = check new openai:Model({
         connectionConfig: {
             auth: {token: "not-a-real-token"}
         },
         serviceUrl: "http://localhost:8080/llm/openai"
     }, "gpt4o");
-    Review review = check callLlm(`Please rate this blog out of 10.
+    Review review = check np:callLlm(`Please rate this blog out of 10.
         Title: ${blog2.title}
         Content: ${blog2.content}`, {model});
     test:assertEquals(review, review2);
@@ -42,7 +54,7 @@ function testPromptAsCodeFunctionWithStructuredExpectedTypeWithOpenAIClient() re
 
 @test:Config
 function testJsonConversionError() {
-    boolean|error rating = callLlm(`What is 1 + 1?`);
+    boolean|error rating = np:callLlm(`What is 1 + 1?`, {model: azureOpenAI});
     test:assertTrue(rating is error);
     test:assertTrue((<error> rating).message().includes(ERROR_MESSAGE));
 }
@@ -50,14 +62,15 @@ function testJsonConversionError() {
 type RecordForInvalidBinding record {| string name; |};
 @test:Config
 function testJsonConversionError2() {
-    RecordForInvalidBinding[]|error rating = callLlm(`Tell me name and the age of the top 10 world class cricketers`);
+    RecordForInvalidBinding[]|error rating = np:callLlm(
+        `Tell me name and the age of the top 10 world class cricketers`, {model: azureOpenAI});
     test:assertTrue(rating is error);
     test:assertTrue((<error> rating).message().includes(ERROR_MESSAGE));
 }
 
 @test:Config
 function testJsonContentAfterTextDescription() returns error? {
-    int result = check callLlm(`What's the output of the Ballerina code below?
+    int result = check np:callLlm(`What's the output of the Ballerina code below?
 
     ${"```"}ballerina
     import ballerina/io;
@@ -67,12 +80,14 @@ function testJsonContentAfterTextDescription() returns error? {
         int y = 20;
         io:println(x + y);
     \}
-    ${"```"}`);
+    ${"```"}`, 
+    {model: azureOpenAI});
     test:assertEquals(result, 30);
 }
 
 @test:Config
 function testJsonContentWithoutJsonAfterBackticks() returns error? {
-    string result = check callLlm(`Which country is known as the pearl of the Indian Ocean?`);
+    string result = check np:callLlm(
+        `Which country is known as the pearl of the Indian Ocean?`, {model: azureOpenAI});
     test:assertEquals(result, "Sri Lanka");
 }

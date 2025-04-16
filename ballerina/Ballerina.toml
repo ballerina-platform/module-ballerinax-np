@@ -8,6 +8,14 @@ repository = "https://github.com/ballerina-platform/module-ballerinax-np"
 license = ["Apache-2.0"]
 distribution = "2201.11.0"
 
+[[package.modules]]
+name = "np.openai"
+export = true
+
+[[package.modules]]
+name = "np.azure.openai"
+export = true
+
 [platform.java21]
 graalvmCompatible = true
 

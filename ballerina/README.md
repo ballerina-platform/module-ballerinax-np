@@ -71,7 +71,7 @@ The model to use can be set either by configuration or by introducing a `context
 
 2. Model in a parameter
 
-    Alternatively, to have more control over the model for each function, a `context` parameter of type `np:Context`, with the `model` field of type `np:Model`, can be introduced in the function.
+    Alternatively, to have more control over the model for each function, a `context` parameter of type `np:Context`, with the `model` field of type `np:ModelProvider`, can be introduced in the function.
 
     ```ballerina
     public isolated function reviewBlog(
@@ -89,21 +89,23 @@ The model to use can be set either by configuration or by introducing a `context
     ```
 
 
-The `ballerinax/np` module provides implementations of `np:Model` for different LLM providers: 
+The `ballerinax/np` package provides implementations of `np:ModelProvider` for different LLM providers: 
 
-- `np:OpenAIModel` for Open AI
-- `np:AzureOpenAIModel` for Azure Open AI
+- `ballerinax/np.openai:ModelProvider` for Open AI
+- `ballerinax/np.azure.openai:ModelProvider` for Azure Open AI
 
 A model of these types can be initialized and provided as an argument for the `model` parameter.
 
 ```ballerina
+import ballerinax/np.azure.openai as azureOpenAI;
+
 configurable string apiKey = ?;
 configurable string serviceUrl = ?;
 configurable string deploymentId = ?;
 configurable string apiVersion = ?;
 
 
-final np:Model azureOpenAIModel = check new np:AzureOpenAIModel({
+final azureOpenAI:ModelProvider azureOpenAIModel = check new({
        serviceUrl, connectionConfig: {auth: {apiKey}}}, deploymentId, apiVersion);
 
 Review review = check reviewBlog(blog, {model: azureOpenAIModel});

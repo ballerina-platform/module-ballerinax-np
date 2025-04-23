@@ -27,8 +27,8 @@ public type ModelConfig record {|
 |};
 
 # OpenAI model chat completion client.
-public isolated distinct client class Model {
-    *np:Model;
+public isolated distinct client class ModelProvider {
+    *np:ModelProvider;
 
     private final chat:Client cl;
     private final string model;

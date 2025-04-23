@@ -21,7 +21,7 @@ import ballerina/test;
 
 const ERROR_MESSAGE = "Error occurred while attempting to parse the response from the LLM as the expected type. Retrying and/or validating the prompt could fix the response.";
 
-final np:Model azureOpenAI = check new azureOpenAI:Model({
+final np:ModelProvider azureOpenAI = check new azureOpenAI:ModelProvider({
     serviceUrl: "http://localhost:8080/llm/azureopenai",
     connectionConfig: {
         auth: {
@@ -40,7 +40,7 @@ function testPromptAsCodeFunctionWithSimpleExpectedTypeWithDefaultAzureOpenAICli
 
 @test:Config
 function testPromptAsCodeFunctionWithStructuredExpectedTypeWithOpenAIClient() returns error? {
-    np:Model model = check new openai:Model({
+    np:ModelProvider model = check new openai:ModelProvider({
         connectionConfig: {
             auth: {token: "not-a-real-token"}
         },

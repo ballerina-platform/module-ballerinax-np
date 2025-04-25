@@ -39,7 +39,7 @@ token = "<TOKEN>"
 ### Azure OpenAI
 
 ```ballerina
-import ballerinax/np.azure.openai as azureOpenAI;;
+import ballerinax/np.azure.openai as azureOpenAI;
 
 configurable string serviceUrl = ?;
 configurable string deploymentId = ?;

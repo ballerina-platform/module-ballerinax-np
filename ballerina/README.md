@@ -1,129 +1,121 @@
 # Overview
 
-The natural programming library module provides seamless integration with Large Language Models (LLMs). It offers a first-class approach to integrate LLM calls with automatic detection of expected response formats and parsing of responses to corresponding Ballerina types.
+This library module provides implementations of `ballerina/np:ModelProvider` to use explicitly with natural expressions.
 
-This simplifies working with AI models by handling the communication and data conversion automatically.
+- [OpenAI](#openai)
+- [Azure OpenAI](#azure-openai)
 
-## The `np:NaturalFunction` annotation
+## Initializing the model
 
-An `external` function annotated with `np:NaturalFunction` and with a `prompt` parameter of type `np:Prompt` becomes an LLM call with the specified prompt. The JSON schema generated from the return type of the function is incorporated to the LLM call and the response from the LLM is automatically parsed to the type used as the return type.
+### OpenAI
 
 ```ballerina
-import ballerinax/np;
+import ballerinax/np.openai;
 
-final readonly & string[] categories = loadCategories();
+configurable string? serviceUrl = ();
+configurable string model = ?;
+configurable string token = ?;
 
-public type Blog record {|
-    string title;
-    string content;
-|};
-
-type Review record {|
-    string? suggestedCategory;
-    int rating;
-|};
-
-public isolated function reviewBlog(
-    Blog blog,
-    np:Prompt prompt = `You are an expert content reviewer for a blog site that 
-        categorizes posts under the following categories: ${categories}
-
-        Your tasks are:
-        1. Suggest a suitable category for the blog from exactly the specified categories. 
-           If there is no match, use null.
-
-        2. Rate the blog post on a scale of 1 to 10 based on the following criteria:
-        - **Relevance**: How well the content aligns with the chosen category.
-        - **Depth**: The level of detail and insight in the content.
-        - **Clarity**: How easy it is to read and understand.
-        - **Originality**: Whether the content introduces fresh perspectives or ideas.
-        - **Language Quality**: Grammar, spelling, and overall writing quality.
-
-        Here is the blog post content:
-
-        Title: ${blog.title}
-        Content: ${blog.content}`) returns Review|error = @np:NaturalFunction external;
+final openai:ModelProvider openAI = check new ({
+        connectionConfig: {
+            auth: {
+                token
+            }
+        },
+        serviceUrl
+    }, 
+    model
+);
 ```
 
-Note how the prompt refers to preceding parameters. These functions, thus, become a type-safe approach to share and reuse prompts.
+Specify values for the configurable variables in the Config.toml file.
 
-The function can then be used in the code similar to any other function.
-
-```ballerina
-Review review = check reviewBlog(blog);
+```toml
+serviceUrl = "<SERVICE_URL>"
+model = "<MODEL>"
+token = "<TOKEN>"
 ```
 
-### Configuring the model
-
-The model to use can be set either by configuration or by introducing a `context` parameter of type `np:Context`, with a `model` field of type `np:Model`, in the function.
-
-1. Configuration
-
-    Values need to be provided for the `defaultModelConfig` configurable value. E.g., add the relevant configuration in the Config.toml file as follows for Azure OpenAI:
-
-    ```toml
-    [ballerinax.np.defaultModelConfig]
-    serviceUrl = "<SERVICE_URL>"
-    deploymentId = "<DEPLOYMENT_ID>"
-    apiVersion = "<API_VERSION>"
-    connectionConfig.auth.apiKey = "<YOUR_API_KEY>"
-    ```
-
-2. Model in a parameter
-
-    Alternatively, to have more control over the model for each function, a `context` parameter of type `np:Context`, with the `model` field of type `np:Model`, can be introduced in the function.
-
-    ```ballerina
-    public isolated function reviewBlog(
-        Blog blog,
-        np:Context context,
-        np:Prompt prompt = `You are an expert content reviewer for a blog site that 
-            categorizes posts under the following categories: ${categories}
-
-            ...
-
-            Here is the blog post content:
-
-            Title: ${blog.title}
-            Content: ${blog.content}`) returns Review|error = @np:NaturalFunction external;
-    ```
-
-
-The `ballerinax/np` module provides implementations of `np:Model` for different LLM providers: 
-
-- `np:OpenAIModel` for Open AI
-- `np:AzureOpenAIModel` for Azure Open AI
-
-A model of these types can be initialized and provided as an argument for the `model` parameter.
+### Azure OpenAI
 
 ```ballerina
-configurable string apiKey = ?;
+import ballerinax/np.azure.openai as azureOpenAI;;
+
 configurable string serviceUrl = ?;
 configurable string deploymentId = ?;
 configurable string apiVersion = ?;
+configurable string apiKey = ?;
 
-
-final np:Model azureOpenAIModel = check new np:AzureOpenAIModel({
-       serviceUrl, connectionConfig: {auth: {apiKey}}}, deploymentId, apiVersion);
-
-Review review = check reviewBlog(blog, {model: azureOpenAIModel});
+final azureOpenAI:ModelProvider azureOpenAIModel = check new (
+    {
+        serviceUrl, 
+        connectionConfig: {
+            auth: {
+                apiKey
+            }
+        }
+    },
+    deploymentId, 
+    apiVersion
+);
 ```
 
-## The `np:callLlm` function
+Specify values for the configurable variables in the Config.toml file.
 
-The `np:callLlm` function is an alternative to defining a separate function with the `np:NaturalFunction` annotation.
+```toml
+serviceUrl = "<SERVICE_URL>"
+deploymentId = "<DEPLOYMENT_ID>"
+apiVersion = "<API_VERSION>"
+connectionConfig.auth.apiKey = "<YOUR_API_KEY>"
+```
 
-The function accepts a prompt of type `np:Prompt` and optionally, an `np:Conext` value with the `model` field of type `np:Model`. If the model is not specified, it has to be configured via the `defaultModelConfig` configurable variable. The function is dependently-typed and uses the inferred typedesc parameter to construct the JSON schema for the required response format and bind the response data to the expected type.
+## Using the model
+
+A model of these types can be used in a natural expression.
 
 ```ballerina
-// Where `blog` is in scope.
-Review review = check np:callLlm(`You are an expert content reviewer for a blog site that 
-            categorizes posts under the following categories: ${categories}
+import ballerina/io;
+import ballerina/np;
+import ballerinax/np.openai;
 
-            ...
+configurable string? serviceUrl = ();
+configurable string model = ?;
+configurable string token = ?;
 
-            Here is the blog post content:
+type Author record {| 
+    string name;
+    string dateOfBirth;
+    record {|
+        string name;
+        string yearOfPublication;
+        string genre;
+    |}[] works;
+|};
 
-            Title: ${blog.title}
-            Content: ${blog.content}`, {model: azureOpenAIModel});
+isolated function getAuthorDetails(string month, int count, np:ModelProvider model) 
+        returns Author|error => natural (model) {
+    Who is a popular author born in ${month}? What are their ${count} most popular works?
+};
+
+public function main() returns error? {
+    openai:ModelProvider openAI = check new ({
+            connectionConfig: {
+                auth: {
+                    token
+                }
+            },
+            serviceUrl
+        }, 
+        model
+    );
+
+    Author author = check getAuthorDetails("July", 5, openAI);
+    io:println("Name: ", author.name);
+    io:println("Date of Birth: ", author.dateOfBirth);
+    foreach var work in author.works {
+        io:println("Title: ", work.name);
+        io:println("Year of Publication: ", work.yearOfPublication);
+        io:println("Genre: ", work.genre);
+    }
+}
 ```

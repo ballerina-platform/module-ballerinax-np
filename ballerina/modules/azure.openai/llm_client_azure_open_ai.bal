@@ -14,10 +14,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import np.commons;
+import ballerina/np;
 import ballerinax/azure.openai.chat;
 
 # Configuration for Azure OpenAI model.
-public type AzureOpenAIModelConfig record {|
+public type ModelConfig record {|
     # Connection configuration for the Azure OpenAI model.
     chat:ConnectionConfig connectionConfig;
     # Service URL for the Azure OpenAI model.
@@ -25,14 +27,14 @@ public type AzureOpenAIModelConfig record {|
 |};
 
 # Azure OpenAI model chat completion client.
-public isolated distinct client class AzureOpenAIModel {
-    *Model;
+public isolated distinct client class ModelProvider {
+    *np:ModelProvider;
 
     private final chat:Client cl;
     private final string deploymentId;
     private final string apiVersion;
 
-    public isolated function init(chat:Client|AzureOpenAIModelConfig azureOpenAI,
+    public isolated function init(chat:Client|ModelConfig azureOpenAI,
             string deploymentId,
             string apiVersion) returns error? {
         self.cl = azureOpenAI is chat:Client ?
@@ -42,9 +44,12 @@ public isolated distinct client class AzureOpenAIModel {
         self.apiVersion = apiVersion;
     }
 
-    isolated remote function call(string prompt, map<json> expectedResponseSchema) returns json|error {
+    isolated remote function call(np:Prompt prompt, typedesc<anydata> expectedResponseTypedesc) returns anydata|error {
         chat:CreateChatCompletionRequest chatBody = {
-            messages: [{role: "user", "content": getPromptWithExpectedResponseSchema(prompt, expectedResponseSchema)}]
+            messages: [{
+                role: "user", 
+                "content": commons:getPromptWithExpectedResponseSchema(prompt, expectedResponseTypedesc)
+            }]
         };
 
         chat:Client cl = self.cl;
@@ -65,6 +70,6 @@ public isolated distinct client class AzureOpenAIModel {
         if resp is () {
             return error("No completion message");
         }
-        return parseResponseAsJson(resp);
+        return commons:parseResponseAsType(resp, expectedResponseTypedesc);
     }
 }

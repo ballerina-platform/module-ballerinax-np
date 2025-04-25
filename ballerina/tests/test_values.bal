@@ -34,7 +34,9 @@ final readonly & Review review2 = {
 
 final string expectedPromptStringForRateBlog = string `Rate this blog out of 10.
         Title: ${blog1.title}
-        Content: ${blog1.content}.  
+        Content: ${blog1.content}
+        ---
+
         The output should be a JSON value that satisfies the following JSON schema, 
         returned within a markdown snippet enclosed within ${"```json"} and ${"```"}
         
@@ -43,26 +45,32 @@ final string expectedPromptStringForRateBlog = string `Rate this blog out of 10.
 
 final string expectedPromptStringForRateBlog2 = string `Please rate this blog out of 10.
         Title: ${blog2.title}
-        Content: ${blog2.content}.  
+        Content: ${blog2.content}
+        ---
+
         The output should be a JSON value that satisfies the following JSON schema, 
         returned within a markdown snippet enclosed within ${"```json"} and ${"```"}
         
         Schema:
         {"$schema":"https://json-schema.org/draft/2020-12/schema", "type":"object", "properties":{"rating":{"type":"integer"}, "comment":{"type":"string"}}, "required":["rating", "comment"]}`;
 
-final string expectedPromptStringForRateBlog3 = string `What is 1 + 1?.  
+final string expectedPromptStringForRateBlog3 = string `What is 1 + 1?
+        ---
+
         The output should be a JSON value that satisfies the following JSON schema, 
         returned within a markdown snippet enclosed within ${"```json"} and ${"```"}
         
         Schema:
         {"type":"boolean"}`;
 
-final string expectedPromptStringForRateBlog4 = string `Tell me name and the age of the top 10 world class cricketers.  
+final string expectedPromptStringForRateBlog4 = string `Tell me name and the age of the top 10 world class cricketers
+        ---
+
         The output should be a JSON value that satisfies the following JSON schema, 
         returned within a markdown snippet enclosed within ${"```json"} and ${"```"}
         
         Schema:
-        {"$schema":"https://json-schema.org/draft/2020-12/schema", "type":"array", "items":{"$schema":"https://json-schema.org/draft/2020-12/schema", "type":"object", "properties":{"name":{"type":"string"}}, "required":["name"]}}`;
+        {"type":"array", "items":{"required":["name"], "type":"object", "properties":{"name":{"type":"string"}}}}`;
 
 final string expectedPromptStringForBalProgram = string `What's the output of the Ballerina code below?
 
@@ -74,14 +82,18 @@ final string expectedPromptStringForBalProgram = string `What's the output of th
         int y = 20;
         io:println(x + y);
     \}
-    ${"```"}.  
+    ${"```"}
+        ---
+
         The output should be a JSON value that satisfies the following JSON schema, 
         returned within a markdown snippet enclosed within ${"```json"} and ${"```"}
         
         Schema:
         {"type":"integer"}`;
 
-final string expectedPromptStringForCountry = string `Which country is known as the pearl of the Indian Ocean?.  
+final string expectedPromptStringForCountry = string `Which country is known as the pearl of the Indian Ocean?
+        ---
+
         The output should be a JSON value that satisfies the following JSON schema, 
         returned within a markdown snippet enclosed within ${"```json"} and ${"```"}
         

@@ -16,7 +16,7 @@
  * under the License.
  */
 
-module io.ballerina.lib.np {
+module io.ballerina.libx.np {
     requires io.ballerina.lang;
     requires io.ballerina.runtime;
 }

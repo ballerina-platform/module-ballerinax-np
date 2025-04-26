@@ -1,2 +1,3 @@
 # module-ballerinax-np
-Library module for natural programming
+
+Extended library module with implementations of `ballerina/np:ModelProvider` to use with natural expressions.

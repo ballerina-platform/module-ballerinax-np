@@ -1,6 +1,13 @@
-# Overview
+## Overview
 
-This library module provides implementations of `ballerina/np:ModelProvider` to use explicitly with natural expressions.
+The Natural Programming (NP) connector provides implementations of `ballerina/np:ModelProvider` to use explicitly with natural expressions.
+
+### Key Features
+
+- OpenAI model provider for natural expressions
+- Azure OpenAI model provider for natural expressions
+- Type-safe natural language function invocations with structured return types
+- Configurable service URL, model, and authentication
 
 - [OpenAI](#openai)
 - [Azure OpenAI](#azure-openai)

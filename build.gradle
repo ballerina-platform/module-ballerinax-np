@@ -18,7 +18,7 @@
 
 plugins {
     id "com.github.spotbugs"
-    id "com.github.johnrengelman.shadow"
+    id "com.gradleup.shadow"
     id "de.undercouch.download"
     id "net.researchgate.release"
 }
@@ -29,6 +29,10 @@ allprojects {
 
     apply plugin: 'jacoco'
     apply plugin: 'maven-publish'
+
+    jacoco {
+        toolVersion = "${jacocoVersion}"
+    }
 
     repositories {
         mavenLocal()
@@ -84,6 +88,12 @@ subprojects {
     }
 }
 
-task build {
-    dependsOn('np-ballerina:build')
+if (!tasks.names.contains('build')) {
+    task build {
+        dependsOn('np-ballerina:build')
+    }
+} else {
+    tasks.named('build') {
+        dependsOn('np-ballerina:build')
+    }
 }

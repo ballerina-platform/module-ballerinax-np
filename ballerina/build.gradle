@@ -50,8 +50,14 @@ ballerina {
     testCoverageParam = "--code-coverage --coverage-format=xml"
     packageOrganization = packageOrg
     platform = "java21"
-    isConnector = true
+    connector = true
 }
+
+abstract class ExecHelper {
+    @Inject
+    abstract ExecOperations getExecOperations()
+}
+def execHelper = project.objects.newInstance(ExecHelper)
 
 configurations {
     externalJars
@@ -67,7 +73,7 @@ task updateTomlFiles {
 
 task commitTomlFiles {
     doLast {
-        project.exec {
+        execHelper.execOperations.exec {
             ignoreExitValue true
             if (Os.isFamily(Os.FAMILY_WINDOWS)) {
                 commandLine 'cmd', '/c', "git commit Ballerina.toml Dependencies.toml -m '[Automated] Update the native jar versions'"
